@@ -3,26 +3,29 @@
 #include <map>
 #include <vector>
 
+using namespace std;
+
 // Класс продукта
 class Product {
 public:
-    std::string name;
+    int id;
+    string name;
     int quantity;
 
-    Product(const std::string& _name, int _quantity) : name(_name), quantity(_quantity) {}
+    Product(int _id, const string& _name, int _quantity) : id(_id), name(_name), quantity(_quantity) {}
 };
 
 // Класс меню
 class Menu {
 private:
-    std::vector<Product> products;
+    vector<Product> products;
 
 public:
-    void addToMenu(const std::string& name, int quantity) {
-        products.emplace_back(name, quantity);
+    void addToMenu(int id, const string& name, int quantity) {
+        products.emplace_back(id, name, quantity);
     }
 
-    bool isAvailable(const std::string& name, int quantity) {
+    bool isAvailable(const string& name, int quantity) {
         for (const auto& product : products) {
             if (product.name == name && product.quantity >= quantity) {
                 return true;
@@ -30,21 +33,46 @@ public:
         }
         return false;
     }
+
+    void GetMenu() {
+        for (const auto& product : products) {
+            cout << "ID: " << product.id << " | Dish: " << product.name << endl;
+        }
+    }
+
+    string getMenuProductNameById(int id) {
+        for (const auto& product : products) {
+            if (product.id == id) {
+                return product.name;
+            }
+        }
+        return "Блюдо не найдено";  // Возвращаем пустую строку, если продукт с указанным id не найден
+    }
+
+    int GetQuantity(int id) {
+        for (const auto& product : products) {
+            if (product.id == id) {
+                return product.quantity;
+            }
+        }
+        return 0; // Возвращаем 0, если продукт не найден
+    }
 };
 
 // Класс корзины заказа гостя
 class GuestOrderBasket {
 private:
-    std::vector<Product> items;
+    vector<Product> items;
 
 public:
-    void addItem(const std::string& name, int quantity) {
-        items.emplace_back(name, quantity);
+    void addItem(int id, string name, int quantity) {
+        items.emplace_back(id, name, quantity);
     }
 
     void printBasket() const {
+        cout << "Ваш заказ: " << endl;
         for (const auto& item : items) {
-            std::cout << "Product: " << item.name << ", Quantity: " << item.quantity << std::endl;
+            cout << "Dish: " << item.name << ", Quantity: " << item.quantity << endl;
         }
     }
 };
@@ -52,15 +80,15 @@ public:
 // Класс заказа
 class Order {
 public:
-    std::string status;
+    string status;
 
-    Order() : status("Новый заказ") {}
+    Order() : status("New order") {}
 
     void confirmOrder() {
         status = "Оплачен и передан на кухню";
     }
 
-    void updateStatus(const std::string& newStatus) {
+    void updateStatus(const string& newStatus) {
         status = newStatus;
     }
 };
@@ -68,20 +96,20 @@ public:
 // Класс сотрудника
 class Employee {
 public:
-    std::string role;
-    std::string lastName;
-    std::string firstName;
-    std::string patronymic;
-    std::string username;
-    std::string password;
+    string role;
+    string lastName;
+    string firstName;
+    string patronymic;
+    string username;
+    string password;
 
     Employee(
-        const std::string& _role,
-        const std::string& _lastName,
-        const std::string& _firstName,
-        const std::string& _patronymic,
-        const std::string& _username,
-        const std::string& _password)
+        const string& _role,
+        const string& _lastName,
+        const string& _firstName,
+        const string& _patronymic,
+        const string& _username,
+        const string& _password)
         : role(_role),
         lastName(_lastName),
         firstName(_firstName),
@@ -109,23 +137,23 @@ public:
 // Класс журнала аудита
 class AuditLog {
 private:
-    std::vector<std::string> entries;
+    vector<string> entries;
 
 public:
-    void addEntry(const std::string& entry) {
+    void addEntry(const string& entry) {
         entries.push_back(entry);
     }
 
     void printEntries() const {
         for (const auto& entry : entries) {
-            std::cout << entry << std::endl;
+            cout << entry << endl;
         }
     }
 };
 
 class ProductRequest {
 public:
-    std::map<int, int> products; // Ключ - идентификатор продукта, Значение - количество продукта
+    map<int, int> products; // Ключ - идентификатор продукта, Значение - количество продукта
 };
 
 // Класс складского
@@ -155,11 +183,11 @@ public:
 // Класс бухгалтера
 class Accountant {
 public:
-    void viewProductRequests(const std::vector<ProductRequest>& requests) {
+    void viewProductRequests(const vector<ProductRequest>& requests) {
         // Логика просмотра всех отправленных заявок на продукты
     }
 
-    void viewDeliveries(const std::vector<ProductRequest>& deliveries) {
+    void viewDeliveries(const vector<ProductRequest>& deliveries) {
         // Логика просмотра всех принятых поставок продуктов
     }
 
@@ -170,7 +198,7 @@ public:
 
 class Chef {
 public:
-    void viewOrders(const std::vector<Order>& orders) {
+    void viewOrders(const vector<Order>& orders) {
         // Логика просмотра всех заказов
     }
 
@@ -178,7 +206,7 @@ public:
         // Логика начала приготовления заказа
     }
 
-    void prepareItem(Order& order, int menuItemIndex, const std::vector<int>& productNumbers) {
+    void prepareItem(Order& order, int menuItemIndex, const vector<int>& productNumbers) {
         // Логика приготовления конкретного пункта заказа
     }
 };
@@ -186,18 +214,67 @@ public:
 // Класс официанта
 class Waiter {
 public:
-    void viewAvailableOrders(const std::vector<Order>& orders) {
+    void viewAvailableOrders(const vector<Order>& orders) {
         // Логика просмотра доступных для выдачи заказов
     }
 
-    void changeOrderStatus(Order& order, const std::string& newStatus) {
+    void changeOrderStatus(Order& order, const string& newStatus) {
         order.status = newStatus;
     }
 };
 
+void clearConsole() {
+    system("cls");
+}
+
 int main()
 {
-    
+    bool isLogin = false;
+    setlocale(LC_ALL, "Russian");
+    string login;
+    string password;
+
+    Menu menu;
+
+    menu.addToMenu(1, "Бургер", 5);
+    menu.addToMenu(2, "Пицца", 3);
+    menu.addToMenu(3, "Салат", 2);
+    menu.addToMenu(4, "Суп", 4);
+    menu.addToMenu(5, "Стейк", 6);
+    menu.addToMenu(6, "Рыба", 3);
+    menu.addToMenu(7, "Паста", 4);
+    menu.addToMenu(8, "Картофель фри", 5);
+    menu.addToMenu(9, "Суши", 7);
+    menu.addToMenu(10, "Десерт", 3);
+
+    while (!isLogin) {
+        cout << "Добро пожаловать в ресторан" << endl;
+        cout << "Ваш логин: ";
+        cin >> login;
+        cout << "Ваш пароль: ";
+        cin >> password;
+
+        if (login == "guest" && password == "guest") {
+            isLogin = true;
+            GuestOrderBasket backet;
+            clearConsole();
+            menu.GetMenu();
+            int id = 0;
+            do {
+                int quantity = 0;
+                cout << "Для заказа блюда, введите его номер: " << endl;
+                cin >> id;
+                cout << "Количество: " << endl;
+                cin >> quantity;
+
+                string productName = menu.getMenuProductNameById(id);
+                if (menu.isAvailable(productName, quantity)) backet.addItem(id, productName, quantity);
+                else cout << "У нас всего: " << menu.GetQuantity(id) << "шт. " << productName << endl;
+            } while (id != 0);
+
+            backet.printBasket();
+        }
+    }
 
     return 0;
 }
