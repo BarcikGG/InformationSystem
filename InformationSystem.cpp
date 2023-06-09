@@ -10,10 +10,37 @@ class Product {
 public:
     int id;
     string name;
+    double price;
     int quantity;
 
-    Product(int _id, const string& _name, int _quantity) : id(_id), name(_name), quantity(_quantity) {}
+    Product(int _id, const string& _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {}
 };
+
+// Класс ресторан
+class Restaurant {
+private:
+    double balance;
+
+public:
+    Restaurant(double initialBalance) : balance(initialBalance) {}
+
+    double getBalance() const {
+        return balance;
+    }
+
+    void deposit(double amount) {
+        balance += amount;
+    }
+
+    bool withdraw(double amount) {
+        if (amount <= balance) {
+            balance -= amount;
+            return true;  // Успешное списание средств
+        }
+        return false;  // Недостаточно средств на балансе
+    }
+};
+
 
 // Класс меню
 class Menu {
@@ -21,8 +48,8 @@ private:
     vector<Product> products;
 
 public:
-    void addToMenu(int id, const string& name, int quantity) {
-        products.emplace_back(id, name, quantity);
+    void addToMenu(int id, const string& name, double price, int quantity) {
+        products.emplace_back(id, name, price, quantity);
     }
 
     bool isAvailable(const string& name, int quantity) {
@@ -36,7 +63,7 @@ public:
 
     void GetMenu() {
         for (const auto& product : products) {
-            cout << "ID: " << product.id << " | Dish: " << product.name << endl;
+            cout << "ID: " << product.id << " | Dish: " << product.name << " Цена: " << product.price << "руб." << endl;
         }
     }
 
@@ -47,6 +74,15 @@ public:
             }
         }
         return "Блюдо не найдено";  // Возвращаем пустую строку, если продукт с указанным id не найден
+    }
+
+    double GetPrice(int id) {
+        for (const auto& product : products) {
+            if (product.id == id) {
+                return product.price;
+            }
+        }
+        return 0; // Возвращаем 0, если продукт не найден
     }
 
     int GetQuantity(int id) {
@@ -65,8 +101,8 @@ private:
     vector<Product> items;
 
 public:
-    void addItem(int id, string name, int quantity) {
-        items.emplace_back(id, name, quantity);
+    void addItem(int id, string name, double price, int quantity) {
+        items.emplace_back(id, name, price, quantity);
     }
 
     void printBasket() const {
@@ -74,6 +110,15 @@ public:
         for (const auto& item : items) {
             cout << "Dish: " << item.name << ", Quantity: " << item.quantity << endl;
         }
+    }
+
+    double Amount() {
+        double amount = 0;
+        for (const auto& item : items) {
+            amount += item.price;
+        }
+        
+        return amount;
     }
 };
 
@@ -234,18 +279,19 @@ int main()
     string login;
     string password;
 
+    Restaurant restaurant{1000000};
     Menu menu;
 
-    menu.addToMenu(1, "Бургер", 5);
-    menu.addToMenu(2, "Пицца", 3);
-    menu.addToMenu(3, "Салат", 2);
-    menu.addToMenu(4, "Суп", 4);
-    menu.addToMenu(5, "Стейк", 6);
-    menu.addToMenu(6, "Рыба", 3);
-    menu.addToMenu(7, "Паста", 4);
-    menu.addToMenu(8, "Картофель фри", 5);
-    menu.addToMenu(9, "Суши", 7);
-    menu.addToMenu(10, "Десерт", 3);
+    menu.addToMenu(1, "Бургер", 499, 5);
+    menu.addToMenu(2, "Пицца", 1200, 3);
+    menu.addToMenu(3, "Салат", 399, 2);
+    menu.addToMenu(4, "Суп", 350, 4);
+    menu.addToMenu(5, "Стейк", 1200, 6);
+    menu.addToMenu(6, "Рыба", 1500, 3);
+    menu.addToMenu(7, "Паста", 850, 4);
+    menu.addToMenu(8, "Картофель фри", 250, 5);
+    menu.addToMenu(9, "Суши", 999, 7);
+    menu.addToMenu(10, "Десерт", 450, 3);
 
     while (!isLogin) {
         cout << "Добро пожаловать в ресторан" << endl;
@@ -256,23 +302,59 @@ int main()
 
         if (login == "guest" && password == "guest") {
             isLogin = true;
+            char answer;
+            double guest_amount;
             GuestOrderBasket backet;
+
             clearConsole();
             menu.GetMenu();
             int id = 0;
             do {
-                int quantity = 0;
-                cout << "Для заказа блюда, введите его номер: " << endl;
-                cin >> id;
-                cout << "Количество: " << endl;
-                cin >> quantity;
+                try {
+                    int quantity = 0;
+                    cout << "Для заказа блюда, введите его номер (0 - exit): " << endl;
+                    cin >> id;
 
-                string productName = menu.getMenuProductNameById(id);
-                if (menu.isAvailable(productName, quantity)) backet.addItem(id, productName, quantity);
-                else cout << "У нас всего: " << menu.GetQuantity(id) << "шт. " << productName << endl;
+                    string productName = menu.getMenuProductNameById(id);
+                    int AvailableQuantity = menu.GetQuantity(id);
+
+                    if (menu.isAvailable(productName, quantity)) {
+                        cout << "Количество: " << endl;
+                        cin >> quantity;
+
+                        if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << productName << endl;
+                        else backet.addItem(id, productName, menu.GetPrice(id), quantity);
+                    }
+                    else cout << productName << endl;
+                }
+                catch(exception) {}
             } while (id != 0);
 
+            clearConsole();
             backet.printBasket();
+
+            do {
+                cout << "Подтвердить заказ? (y/n): ";
+                cin >> answer;
+
+                if (answer == 'y') {
+                    do {
+                        try {
+                            cout << "К оплате: " << backet.Amount() << "\nВаша сумма: ";
+                            cin >> guest_amount;
+
+                            if (guest_amount >= backet.Amount()) {
+                                clearConsole();
+                                cout << "Спасибо! Ваш заказ передан на кухню." << endl;
+                                break;
+                            }
+                            else cout << "Недостаточно средств" << endl;
+                        }
+                        catch(exception) {}
+
+                    } while (guest_amount < backet.Amount());
+                }
+            } while (answer != 'y' || answer != 'n');
         }
     }
 
