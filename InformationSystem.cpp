@@ -8,33 +8,37 @@ using namespace std;
 // Класс продукта
 class Product {
 public:
-    int id;
-    string name;
-    double price;
-    int quantity;
+    int id; //id блюдв
+    string name; //название блюда
+    double price; //цена блюда
+    int quantity; //кол-во блюд в наличии
 
-    Product(int _id, const string& _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {}
+    //конструктор продукта
+    Product(int _id, const string& _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
 };
 
 // Класс ресторан
 class Restaurant {
 private:
-    double balance;
+    double balance; //баланс рестика
 
 public:
-    Restaurant(double initialBalance) : balance(initialBalance) {}
+    Restaurant(double initialBalance) : balance(initialBalance) {} //конструктор рестика
 
+    //функция возвращающая баланс ресторана
     double getBalance() const {
         return balance;
     }
 
+    //функция для пополнения баланса ресторана
     void deposit(double amount) {
-        balance += amount;
+        balance += amount; //пополняем баланс
     }
 
+    //функция для списания средств со счета ресторана
     bool withdraw(double amount) {
-        if (amount <= balance) {
-            balance -= amount;
+        if (amount <= balance) { //проверяем, что списываем меньше или сумму баланса рестика
+            balance -= amount; //списываем бабки
             return true;  // Успешное списание средств
         }
         return false;  // Недостаточно средств на балансе
@@ -45,50 +49,57 @@ public:
 // Класс меню
 class Menu {
 private:
-    vector<Product> products;
+    vector<Product> products; //лист блюд для меню
 
 public:
+    //функция добавления блюда в меню
     void addToMenu(int id, const string& name, double price, int quantity) {
-        products.emplace_back(id, name, price, quantity);
+        products.emplace_back(id, name, price, quantity); //добавление блюда
     }
 
+    //функция проверки доступности блюда для заказа
     bool isAvailable(const string& name, int quantity) {
-        for (const auto& product : products) {
+        for (const auto& product : products) { //циклом проходимся по всем позициям меню
+            //проверяем, что конкретное блюдо в количество больше или равно запрашиваемому количеству
             if (product.name == name && product.quantity >= quantity) {
-                return true;
+                return true; //возвращаем true если блюдо есть
             }
         }
-        return false;
+        return false; //блюд не хватает
     }
-
+    
+    //функция  вывода блюд меню
     void GetMenu() {
-        for (const auto& product : products) {
-            cout << "ID: " << product.id << " | Блюдо: " << product.name << " Цена: " << product.price << "руб." << endl;
+        for (const auto& product : products) { //цикл проходящий по всем позициям меню
+            cout << "ID: " << product.id << " | Блюдо: " << product.name << " Цена: " << product.price << "руб." << endl; //вывод блюда
         }
     }
 
+    //функция возвращающая название блюда
     string getMenuProductNameById(int id) {
-        for (const auto& product : products) {
-            if (product.id == id) {
-                return product.name;
+        for (const auto& product : products) { //цикл проходящий по всем позициям меню
+            if (product.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
+                return product.name; //возвращаем название блюда
             }
         }
-        return "Блюдо не найдено";  // Возвращаем пустую строку, если продукт с указанным id не найден
+        return "Блюдо не найдено";  //возвращаем пустую строку, если продукт с указанным id не найден
     }
 
+    //функция возвращающая цену блюда
     double GetPrice(int id) {
-        for (const auto& product : products) {
-            if (product.id == id) {
-                return product.price;
+        for (const auto& product : products) { //цикл проходящий по всем позициям меню
+            if (product.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
+                return product.price; //возвращаем цену блюда
             }
         }
         return 0; // Возвращаем 0, если продукт не найден
     }
 
+    //функция возвращающая кол-во конкретного блюда
     int GetQuantity(int id) {
-        for (const auto& product : products) {
-            if (product.id == id) {
-                return product.quantity;
+        for (const auto& product : products) { //цикл проходящий по всем позициям меню
+            if (product.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
+                return product.quantity; //возвращаем кол-во конкретного блюда
             }
         }
         return 0; // Возвращаем 0, если продукт не найден
@@ -98,36 +109,38 @@ public:
 // Класс корзины заказа гостя
 class GuestOrderBasket {
 private:
-    vector<Product> items;
+    vector<Product> items; //лист с блюдами заказа
 
 public:
+    //функция добавления блюда в заказ
     void addItem(int id, string name, double price, int quantity) {
-        items.emplace_back(id, name, price, quantity);
+        items.emplace_back(id, name, price, quantity); //добавление блюда
     }
 
+    //вывод корзины в консоль
     void printBasket() const {
         cout << "Ваш заказ: " << endl;
-        for (const auto& item : items) {
-            cout << "Блюдо: " << item.name << ", Количество: " << item.quantity << endl;
+        for (const auto& item : items) { //цикл проходящий по всем позиция корзины
+            cout << "Блюдо: " << item.name << ", Количество: " << item.quantity << endl; //вывод каждого блюда
         }
     }
 
+    //функция для подсчета стоимости всего заказа
     double Amount() {
-        double amount = 0;
-        for (const auto& item : items) {
-            amount += item.price * item.quantity;
+        double amount = 0; //обнуляем стоимость
+        for (const auto& item : items) { //проходимся по всем пунктам заказа
+            amount += item.price * item.quantity; //прибавляем к итоговой стоимости стоимость блюда умноженного на количество этого блюда
         }
-        
-        return amount;
+        return amount; //возвращаем стоимость корзины
     }
 };
 
 // Класс заказа
 class Order {
 public:
-    string status;
+    string status; //статус заказа
 
-    Order() : status("Новый заказ!") {}
+    Order() : status("Новый заказ!") {} //конструктор заказа
 
     void confirmOrder() {
         status = "Оплачен и передан на кухню";
@@ -284,22 +297,26 @@ public:
     }
 };
 
+//метод для очистки консоли
 void clearConsole() {
     system("cls");
 }
 
+//метод для работы с гостем
 int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
-    isLogin = true;
-    char answer;
-    char action;
-    int status = 0;
-    double guest_amount;
-    GuestOrderBasket backet;
-    Order order;
+    isLogin = true; //переменная для определения статуса пользователя и управления циклом
+    char answer; //ответ гостя по заказа (да/нет)
+    char action; //действие гостя (просмотр статуса или смена роли)
+    int status = 0; //статус заказа
+    double guest_amount; //сумма которую заплатил гость
+
+    unique_ptr<GuestOrderBasket> backet = make_unique<GuestOrderBasket>(); // создание умного указателя корзины
+    unique_ptr<Order> order = make_unique<Order>(); // создание умного указателя заказа
 
     clearConsole();
-    menu.GetMenu();
-    int id = 0;
+    menu.GetMenu(); //выводим меню для гостя
+    int id = 0; //id для ввода номера заказа
+
     do {
         try {
             int quantity = 0;
@@ -314,7 +331,7 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
                 cin >> quantity;
 
                 if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << productName << endl;
-                else backet.addItem(id, productName, menu.GetPrice(id), quantity);
+                else backet->addItem(id, productName, menu.GetPrice(id), quantity);
             }
             else cout << productName << endl;
         }
@@ -322,7 +339,7 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
     } while (id != 0);
 
     clearConsole();
-    backet.printBasket();
+    backet->printBasket();
 
     do {
         cout << "Подтвердить заказ? (y/n): ";
@@ -331,14 +348,14 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
         if (answer == 'y') {
             do {
                 try {
-                    cout << "К оплате: " << backet.Amount() << "\nВаша сумма: ";
+                    cout << "К оплате: " << backet->Amount() << "\nВаша сумма: ";
                     cin >> guest_amount;
 
-                    if (guest_amount >= backet.Amount()) {
+                    if (guest_amount >= backet->Amount()) {
                         clearConsole();
                         restaurant.deposit(guest_amount);
                         cout << "Статус: ";
-                        order.confirmOrder();
+                        order->confirmOrder();
                         cout << "Спасибо! Ваш заказ передан на кухню." << endl;
                         break;
                     }
@@ -346,7 +363,7 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
                 }
                 catch (exception) {}
 
-            } while (guest_amount < backet.Amount());
+            } while (guest_amount < backet->Amount());
             break;
         }
     } while (answer != 'y' || answer != 'n');
@@ -360,23 +377,23 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
             {
             case 0:
                 clearConsole();
-                cout << order.GetStatus() << endl;
+                cout << order->GetStatus() << endl;
                 break;
             case 1:
                 clearConsole();
-                order.CookingOrder();
+                order->CookingOrder();
                 break;
             case 2:
                 clearConsole();
-                order.DeliveryOrder();
+                order->DeliveryOrder();
                 break;
             case 3:
                 clearConsole();
-                order.CompleteOrder();
+                order->CompleteOrder();
                 break;
             default:
                 clearConsole();
-                cout << order.GetStatus() << endl;
+                cout << order->GetStatus() << endl;
                 break;
             }
 
