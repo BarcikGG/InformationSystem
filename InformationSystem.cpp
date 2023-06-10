@@ -63,7 +63,7 @@ public:
 
     void GetMenu() {
         for (const auto& product : products) {
-            cout << "ID: " << product.id << " | Dish: " << product.name << " Цена: " << product.price << "руб." << endl;
+            cout << "ID: " << product.id << " | Блюдо: " << product.name << " Цена: " << product.price << "руб." << endl;
         }
     }
 
@@ -108,14 +108,14 @@ public:
     void printBasket() const {
         cout << "Ваш заказ: " << endl;
         for (const auto& item : items) {
-            cout << "Dish: " << item.name << ", Quantity: " << item.quantity << endl;
+            cout << "Блюдо: " << item.name << ", Количество: " << item.quantity << endl;
         }
     }
 
     double Amount() {
         double amount = 0;
         for (const auto& item : items) {
-            amount += item.price;
+            amount += item.price * item.quantity;
         }
         
         return amount;
@@ -127,14 +127,30 @@ class Order {
 public:
     string status;
 
-    Order() : status("New order") {}
+    Order() : status("Новый заказ!") {}
 
     void confirmOrder() {
         status = "Оплачен и передан на кухню";
+        cout << status << endl;
     }
 
-    void updateStatus(const string& newStatus) {
-        status = newStatus;
+    void CookingOrder() {
+        status = "В процессе приготовления";
+        cout << status << endl;
+    }
+
+    void DeliveryOrder() {
+        status = "Передан официанту";
+        cout << status << endl;
+    }
+
+    void CompleteOrder() {
+        status = "Выдано";
+        cout << status << endl;
+    }
+
+    string GetStatus() {
+        return status;
     }
 };
 
@@ -303,8 +319,11 @@ int main()
         if (login == "guest" && password == "guest") {
             isLogin = true;
             char answer;
+            char action;
+            int status = 0;
             double guest_amount;
             GuestOrderBasket backet;
+            Order order;
 
             clearConsole();
             menu.GetMenu();
@@ -312,7 +331,7 @@ int main()
             do {
                 try {
                     int quantity = 0;
-                    cout << "Для заказа блюда, введите его номер (0 - exit): " << endl;
+                    cout << "Для заказа блюда, введите его номер (0 - завершить): " << endl;
                     cin >> id;
 
                     string productName = menu.getMenuProductNameById(id);
@@ -345,6 +364,9 @@ int main()
 
                             if (guest_amount >= backet.Amount()) {
                                 clearConsole();
+                                restaurant.deposit(guest_amount);
+                                cout << "Статус: ";
+                                order.confirmOrder();
                                 cout << "Спасибо! Ваш заказ передан на кухню." << endl;
                                 break;
                             }
@@ -353,8 +375,37 @@ int main()
                         catch(exception) {}
 
                     } while (guest_amount < backet.Amount());
+                    break;
                 }
             } while (answer != 'y' || answer != 'n');
+
+            do {
+                cout << "s - статус заказа\nr - смена роли" << endl;
+                cin >> action;
+
+                if (action == 's') { 
+                    cout << order.GetStatus() << endl; 
+                    status++;
+
+                    switch (status)
+                    {
+                        case 1:
+                            order.CookingOrder();
+                            break;
+                        case 2:
+                            order.DeliveryOrder();
+                            break;
+                        case 3:
+                            order.CompleteOrder();
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            } while (action != 'r');
+            
+            clearConsole();
+            main();
         }
     }
 
