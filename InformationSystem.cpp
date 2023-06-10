@@ -288,6 +288,106 @@ void clearConsole() {
     system("cls");
 }
 
+int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
+    isLogin = true;
+    char answer;
+    char action;
+    int status = 0;
+    double guest_amount;
+    GuestOrderBasket backet;
+    Order order;
+
+    clearConsole();
+    menu.GetMenu();
+    int id = 0;
+    do {
+        try {
+            int quantity = 0;
+            cout << "Для заказа блюда, введите его номер (0 - завершить): " << endl;
+            cin >> id;
+
+            string productName = menu.getMenuProductNameById(id);
+            int AvailableQuantity = menu.GetQuantity(id);
+
+            if (menu.isAvailable(productName, quantity)) {
+                cout << "Количество: " << endl;
+                cin >> quantity;
+
+                if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << productName << endl;
+                else backet.addItem(id, productName, menu.GetPrice(id), quantity);
+            }
+            else cout << productName << endl;
+        }
+        catch (exception) {}
+    } while (id != 0);
+
+    clearConsole();
+    backet.printBasket();
+
+    do {
+        cout << "Подтвердить заказ? (y/n): ";
+        cin >> answer;
+
+        if (answer == 'y') {
+            do {
+                try {
+                    cout << "К оплате: " << backet.Amount() << "\nВаша сумма: ";
+                    cin >> guest_amount;
+
+                    if (guest_amount >= backet.Amount()) {
+                        clearConsole();
+                        restaurant.deposit(guest_amount);
+                        cout << "Статус: ";
+                        order.confirmOrder();
+                        cout << "Спасибо! Ваш заказ передан на кухню." << endl;
+                        break;
+                    }
+                    else cout << "Недостаточно средств" << endl;
+                }
+                catch (exception) {}
+
+            } while (guest_amount < backet.Amount());
+            break;
+        }
+    } while (answer != 'y' || answer != 'n');
+
+    do {
+        cout << "s - статус заказа\nr - смена роли" << endl;
+        cin >> action;
+
+        if (action == 's') {
+            switch (status)
+            {
+            case 0:
+                clearConsole();
+                cout << order.GetStatus() << endl;
+                break;
+            case 1:
+                clearConsole();
+                order.CookingOrder();
+                break;
+            case 2:
+                clearConsole();
+                order.DeliveryOrder();
+                break;
+            case 3:
+                clearConsole();
+                order.CompleteOrder();
+                break;
+            default:
+                clearConsole();
+                cout << order.GetStatus() << endl;
+                break;
+            }
+
+            status++;
+        }
+    } while (action != 'r');
+
+    clearConsole();
+    return 0;
+}
+
 int main()
 {
     bool isLogin = false;
@@ -317,95 +417,11 @@ int main()
         cin >> password;
 
         if (login == "guest" && password == "guest") {
-            isLogin = true;
-            char answer;
-            char action;
-            int status = 0;
-            double guest_amount;
-            GuestOrderBasket backet;
-            Order order;
-
-            clearConsole();
-            menu.GetMenu();
-            int id = 0;
-            do {
-                try {
-                    int quantity = 0;
-                    cout << "Для заказа блюда, введите его номер (0 - завершить): " << endl;
-                    cin >> id;
-
-                    string productName = menu.getMenuProductNameById(id);
-                    int AvailableQuantity = menu.GetQuantity(id);
-
-                    if (menu.isAvailable(productName, quantity)) {
-                        cout << "Количество: " << endl;
-                        cin >> quantity;
-
-                        if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << productName << endl;
-                        else backet.addItem(id, productName, menu.GetPrice(id), quantity);
-                    }
-                    else cout << productName << endl;
-                }
-                catch(exception) {}
-            } while (id != 0);
-
-            clearConsole();
-            backet.printBasket();
-
-            do {
-                cout << "Подтвердить заказ? (y/n): ";
-                cin >> answer;
-
-                if (answer == 'y') {
-                    do {
-                        try {
-                            cout << "К оплате: " << backet.Amount() << "\nВаша сумма: ";
-                            cin >> guest_amount;
-
-                            if (guest_amount >= backet.Amount()) {
-                                clearConsole();
-                                restaurant.deposit(guest_amount);
-                                cout << "Статус: ";
-                                order.confirmOrder();
-                                cout << "Спасибо! Ваш заказ передан на кухню." << endl;
-                                break;
-                            }
-                            else cout << "Недостаточно средств" << endl;
-                        }
-                        catch(exception) {}
-
-                    } while (guest_amount < backet.Amount());
-                    break;
-                }
-            } while (answer != 'y' || answer != 'n');
-
-            do {
-                cout << "s - статус заказа\nr - смена роли" << endl;
-                cin >> action;
-
-                if (action == 's') { 
-                    cout << order.GetStatus() << endl; 
-                    status++;
-
-                    switch (status)
-                    {
-                        case 1:
-                            order.CookingOrder();
-                            break;
-                        case 2:
-                            order.DeliveryOrder();
-                            break;
-                        case 3:
-                            order.CompleteOrder();
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            } while (action != 'r');
-            
-            clearConsole();
+            Guest(isLogin, menu, restaurant);
             main();
+        }
+        else if (login == "admin" && password == "admin") {
+            
         }
     }
 
