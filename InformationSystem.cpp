@@ -89,6 +89,10 @@ public:
         }
     }
 
+    /*vector<Dish> GetDishs() {
+        return Dishs;
+    }*/
+
     //функция возвращающая название блюда
     string getMenuDishNameById(int id) {
         for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
@@ -158,22 +162,22 @@ public:
 
     void confirmOrder() {
         status = "Оплачен и передан на кухню";
-        cout << status << endl;
+        cout << "Статус изменен на:" << status << endl;
     }
 
     void CookingOrder() {
         status = "В процессе приготовления";
-        cout << status << endl;
+        cout << "Статус изменен на:" << status << endl;
     }
 
     void DeliveryOrder() {
         status = "Передан официанту";
-        cout << status << endl;
+        cout << "Статус изменен на:" << status << endl;
     }
 
     void CompleteOrder() {
         status = "Выдано";
-        cout << status << endl;
+        cout << "Статус изменен на:" << status << endl;
     }
 
     string GetStatus() {
@@ -357,8 +361,22 @@ public:
         // Логика просмотра доступных для выдачи заказов
     }
 
-    void changeOrderStatus(Order& order, const string& newStatus) {
-        order.status = newStatus;
+    void changeOrderStatus(Order& order, int status) {
+        switch (status)
+        {
+        case 1:
+            order.CookingOrder();
+            break;
+        case 2:
+            order.DeliveryOrder();
+            break;
+        case 3:
+            order.CompleteOrder();
+            break;
+        default:
+            cout << "Неверный номер" << endl;
+            break;
+        }
     }
 };
 
@@ -438,31 +456,8 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
         cin >> action;
 
         if (action == 's') {
-            switch (status)
-            {
-            case 0:
-                clearConsole();
-                cout << order->GetStatus() << endl;
-                break;
-            case 1:
-                clearConsole();
-                order->CookingOrder();
-                break;
-            case 2:
-                clearConsole();
-                order->DeliveryOrder();
-                break;
-            case 3:
-                clearConsole();
-                order->CompleteOrder();
-                break;
-            default:
-                clearConsole();
-                cout << order->GetStatus() << endl;
-                break;
-            }
-
-            status++;
+            clearConsole();
+            cout << order->GetStatus() << endl;
         }
     } while (action != 'r');
 
@@ -511,48 +506,15 @@ int Admin_function(string filename, vector<Employee> emploees, AuditLog log)
     return 0;
 }
 
-int main()
-{
-    bool isLogin = false;
-    setlocale(LC_ALL, "Russian");
-
-    string role;
-    string login;
-    string password;
-
-    Restaurant restaurant{1000000};
-    
-    Menu menu;
-    AuditLog log;
-
-    menu.addToMenu(1, "Бургер", 499, 5);
-    menu.addToMenu(2, "Пицца", 1200, 3);
-    menu.addToMenu(3, "Салат", 399, 2);
-    menu.addToMenu(4, "Суп", 350, 4);
-    menu.addToMenu(5, "Стейк", 1200, 6);
-    menu.addToMenu(6, "Рыба", 1500, 3);
-    menu.addToMenu(7, "Паста", 850, 4);
-    menu.addToMenu(8, "Картофель фри", 250, 5);
-    menu.addToMenu(9, "Суши", 999, 7);
-    menu.addToMenu(10, "Десерт", 450, 3);
-
-    vector<Employee> employees;
-
-    // Получение пути до папки "Документы" в Windows
-    char* documentsPath;
-    size_t len;
-    _dupenv_s(&documentsPath, &len, "USERPROFILE");
-    string filePath = documentsPath;
-    filePath += "\\Documents\\employees.txt"; //добавляем к пути файл с сотрудниками
-
+void CheckEmplFile(char* documentsPath, string filename, vector<Employee> employees) {
     if (documentsPath != nullptr) {
-        // Проверка существования файла
-        ifstream file(filePath);
+        // Проверка существования файла сотрудников
+        ifstream file(filename);
         if (file.good()) {
             cout << "Файл сотрудников существует." << endl;
-            
+
             //выгрузка сотрудников из файла в вектор
-            ifstream inputFile(filePath);
+            ifstream inputFile(filename);
             if (inputFile.is_open()) {
                 string line;
                 while (getline(inputFile, line)) {
@@ -567,18 +529,94 @@ int main()
         }
         else {
             // Создание файла
-            ofstream newFile(filePath);
+            ofstream newFile(filename);
             if (newFile.is_open()) {
                 newFile.close();
                 cout << "Файл сотрудников создан." << endl;
                 Employee admin{ "Admin", "Dergachev", "Daniil", "U", "fox", "fox" }; //добавляем админа 
-                employees.push_back(admin); //засовываем в лист сотрудников
+                employees.push_back(admin); //добавляем в лист сотрудников
             }
             else {
                 cout << "Не удалось создать файл" << endl;
             }
         }
     }
+}
+
+void CheckDishsFile(char* documentsPath, string filename, Menu menu) {
+    if (documentsPath != nullptr) {
+        // Проверка существования файла блюд
+        ifstream file(filename);
+        if (file.good()) {
+            cout << "Файл блюд существует." << endl;
+
+            //выгрузка блюд из файла в вектор
+            ifstream inputFile(filename);
+            if (inputFile.is_open()) {
+                string line;
+                while (getline(inputFile, line)) {
+                    stringstream ss(line);
+                    string id, name, price, quantity;
+                    if (ss >> id >> name >> price >> quantity) {
+                        menu.addToMenu(stoi(id), name, stod(price), stoi(quantity));
+                    }
+                }
+                inputFile.close();
+            }
+        }
+        else {
+            // Создание файла
+            ofstream newFile(filename);
+            if (newFile.is_open()) {
+                newFile.close();
+                cout << "Файл блюд создан." << endl;
+                
+                menu.addToMenu(1, "Бургер", 499.99, 5);
+                menu.addToMenu(2, "Пицца", 1200.99, 3);
+                menu.addToMenu(3, "Салат", 399.99, 2);
+                menu.addToMenu(4, "Суп", 350.99, 4);
+                menu.addToMenu(5, "Стейк", 1200.99, 6);
+                menu.addToMenu(6, "Рыба", 1500.99, 3);
+                menu.addToMenu(7, "Паста", 850.99, 4);
+                menu.addToMenu(8, "Картофель фри", 250.99, 5);
+                menu.addToMenu(9, "Суши", 999.99, 7);
+                menu.addToMenu(10, "Десерт", 450.99, 3);
+            }
+            else {
+                cout << "Не удалось создать файл" << endl;
+            }
+        }
+    }
+}
+
+int main()
+{
+    bool isLogin = false;
+    setlocale(LC_ALL, "Russian");
+
+    string role;
+    string login;
+    string password;
+
+    Restaurant restaurant{1000000};
+    
+    Menu menu;
+    AuditLog log;
+
+    vector<Employee> employees;
+    
+
+    // Получение пути до папки "Документы" в Windows
+    char* documentsPath;
+    size_t len;
+    _dupenv_s(&documentsPath, &len, "USERPROFILE");
+    string filePath = documentsPath;
+    
+    filePath += "\\Documents\\employees.txt"; //добавляем к пути файл с сотрудниками
+    CheckEmplFile(documentsPath, filePath, employees);
+
+    filePath += "\\Documents\\dishes.txt"; //добавляем к пути файл с блюдами
+    CheckDishsFile(documentsPath, filePath, menu);
 
     while (!isLogin) {
         cout << "Добро пожаловать в ресторан" << endl;
