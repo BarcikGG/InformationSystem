@@ -11,9 +11,9 @@ using namespace std;
 // Класс блюда
 class Product {
 public:
-    int id; //id блюдв
-    string name; //название блюда
-    double price; //цена блюда
+    int id; //id продукта
+    string name; //название продукта
+    double price; //цена продукта (закупочная)
 
     //конструктор продукта
     Product(int _id, const string& _name, double _price) : id(_id), name(_name), price(_price) {}
@@ -22,12 +22,12 @@ public:
 // Класс блюда
 class Dish {
 public:
-    int id; //id блюдв
+    int id; //id блюда
     string name; //название блюда
     double price; //цена блюда
     int quantity; //кол-во блюд в наличии
 
-    //конструктор продукта
+    //конструктор блюда
     Dish(int _id, const string& _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
 };
 
@@ -275,6 +275,53 @@ public:
             cout << endl;
         }
     }
+
+    void addDish(vector<Dish>& dishes, int id, const string& name, double price, int quantity, const string& filename) {
+        Dish dish{ id, name, price, quantity };
+        dishes.push_back(dish);
+
+        ofstream outputFile(filename);
+        if (outputFile.is_open()) {
+            outputFile << dish.id << " "
+                << dish.name << " "
+                << dish.price << " "
+                << dish.quantity << endl;
+            outputFile.close();
+            cout << "Блюдо успешно добавлено и сохранено в файл." << endl;
+        }
+        else {
+            cerr << "Не удалось открыть файл для записи." << endl;
+        }
+    }
+
+    void getDishes(vector<Dish>& dishes, const string& filename) {
+        ifstream inputFile(filename);
+        if (inputFile.is_open()) {
+            dishes.clear();
+            int id;
+            string name;
+            double price;
+            int quantity;
+            while (inputFile >> id >> name >> price >> quantity) {
+                Dish dish{ id, name, price, quantity };
+                dishes.push_back(dish);
+            }
+            inputFile.close();
+        }
+        else {
+            cerr << "Не удалось открыть файл для чтения." << endl;
+        }
+
+        for (const auto& dish : dishes) {
+            cout << "------------------------\n";
+            cout << "ID: " << dish.id << endl;
+            cout << "Название: " << dish.name << endl;
+            cout << "Цена: " << dish.price << endl;
+            cout << "Количество: " << dish.quantity << endl;
+            cout << endl;
+        }
+    }
+
 };
 
 // Класс журнала аудита
@@ -294,16 +341,16 @@ public:
     }
 };
 
-class DishRequest {
+class ProductRequest {
 public:
-    map<int, int> Dishs; // Ключ - идентификатор продукта, Значение - количество продукта
+    map<int, int> Dishs_map; // Ключ - идентификатор продукта, Значение - количество продукта
 };
 
 // Класс складского
 class Storekeeper {
 public:
-    DishRequest createDishRequest(const Menu& menu) {
-        DishRequest request;
+    ProductRequest createProductRequest(const Menu& menu) {
+        ProductRequest request;
 
         // Логика создания заявки на продукты
 
@@ -318,7 +365,7 @@ public:
 // Класс поставщика
 class Supplier {
 public:
-    void processDishRequest(const DishRequest& request, Menu& menu) {
+    void processDishRequest(const ProductRequest& request, Menu& menu) {
         // Логика обработки заявки на продукты и отправки продуктов
     }
 };
@@ -326,11 +373,11 @@ public:
 // Класс бухгалтера
 class Accountant {
 public:
-    void viewDishRequests(const vector<DishRequest>& requests) {
+    void viewDishRequests(const vector<ProductRequest>& requests) {
         // Логика просмотра всех отправленных заявок на продукты
     }
 
-    void viewDeliveries(const vector<DishRequest>& deliveries) {
+    void viewDeliveries(const vector<ProductRequest>& deliveries) {
         // Логика просмотра всех принятых поставок продуктов
     }
 
@@ -574,13 +621,6 @@ void CheckDishsFile(char* documentsPath, string filename, Menu menu) {
                 menu.addToMenu(1, "Бургер", 499.99, 5);
                 menu.addToMenu(2, "Пицца", 1200.99, 3);
                 menu.addToMenu(3, "Салат", 399.99, 2);
-                menu.addToMenu(4, "Суп", 350.99, 4);
-                menu.addToMenu(5, "Стейк", 1200.99, 6);
-                menu.addToMenu(6, "Рыба", 1500.99, 3);
-                menu.addToMenu(7, "Паста", 850.99, 4);
-                menu.addToMenu(8, "Картофель фри", 250.99, 5);
-                menu.addToMenu(9, "Суши", 999.99, 7);
-                menu.addToMenu(10, "Десерт", 450.99, 3);
             }
             else {
                 cout << "Не удалось создать файл" << endl;
