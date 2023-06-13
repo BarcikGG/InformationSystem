@@ -1,12 +1,26 @@
 ﻿#include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <map>
 #include <vector>
+#include <filesystem>
 
 using namespace std;
 
-// Класс продукта
+// Класс блюда
 class Product {
+public:
+    int id; //id блюдв
+    string name; //название блюда
+    double price; //цена блюда
+
+    //конструктор продукта
+    Product(int _id, const string& _name, double _price) : id(_id), name(_name), price(_price) {}
+};
+
+// Класс блюда
+class Dish {
 public:
     int id; //id блюдв
     string name; //название блюда
@@ -14,7 +28,7 @@ public:
     int quantity; //кол-во блюд в наличии
 
     //конструктор продукта
-    Product(int _id, const string& _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
+    Dish(int _id, const string& _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
 };
 
 // Класс ресторан
@@ -49,19 +63,19 @@ public:
 // Класс меню
 class Menu {
 private:
-    vector<Product> products; //лист блюд для меню
+    vector<Dish> Dishs; //лист блюд для меню
 
 public:
     //функция добавления блюда в меню
     void addToMenu(int id, const string& name, double price, int quantity) {
-        products.emplace_back(id, name, price, quantity); //добавление блюда
+        Dishs.emplace_back(id, name, price, quantity); //добавление блюда
     }
 
     //функция проверки доступности блюда для заказа
     bool isAvailable(const string& name, int quantity) {
-        for (const auto& product : products) { //циклом проходимся по всем позициям меню
+        for (const auto& Dish : Dishs) { //циклом проходимся по всем позициям меню
             //проверяем, что конкретное блюдо в количество больше или равно запрашиваемому количеству
-            if (product.name == name && product.quantity >= quantity) {
+            if (Dish.name == name && Dish.quantity >= quantity) {
                 return true; //возвращаем true если блюдо есть
             }
         }
@@ -70,16 +84,16 @@ public:
     
     //функция  вывода блюд меню
     void GetMenu() {
-        for (const auto& product : products) { //цикл проходящий по всем позициям меню
-            cout << "ID: " << product.id << " | Блюдо: " << product.name << " Цена: " << product.price << "руб." << endl; //вывод блюда
+        for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
+            cout << "ID: " << Dish.id << " | Блюдо: " << Dish.name << " Цена: " << Dish.price << "руб." << endl; //вывод блюда
         }
     }
 
     //функция возвращающая название блюда
-    string getMenuProductNameById(int id) {
-        for (const auto& product : products) { //цикл проходящий по всем позициям меню
-            if (product.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
-                return product.name; //возвращаем название блюда
+    string getMenuDishNameById(int id) {
+        for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
+            if (Dish.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
+                return Dish.name; //возвращаем название блюда
             }
         }
         return "Блюдо не найдено";  //возвращаем пустую строку, если продукт с указанным id не найден
@@ -87,9 +101,9 @@ public:
 
     //функция возвращающая цену блюда
     double GetPrice(int id) {
-        for (const auto& product : products) { //цикл проходящий по всем позициям меню
-            if (product.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
-                return product.price; //возвращаем цену блюда
+        for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
+            if (Dish.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
+                return Dish.price; //возвращаем цену блюда
             }
         }
         return 0; // Возвращаем 0, если продукт не найден
@@ -97,9 +111,9 @@ public:
 
     //функция возвращающая кол-во конкретного блюда
     int GetQuantity(int id) {
-        for (const auto& product : products) { //цикл проходящий по всем позициям меню
-            if (product.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
-                return product.quantity; //возвращаем кол-во конкретного блюда
+        for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
+            if (Dish.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
+                return Dish.quantity; //возвращаем кол-во конкретного блюда
             }
         }
         return 0; // Возвращаем 0, если продукт не найден
@@ -109,7 +123,7 @@ public:
 // Класс корзины заказа гостя
 class GuestOrderBasket {
 private:
-    vector<Product> items; //лист с блюдами заказа
+    vector<Dish> items; //лист с блюдами заказа
 
 public:
     //функция добавления блюда в заказ
@@ -199,12 +213,63 @@ public:
         // Логика редактирования меню
     }
 
-    void editProductList(Menu& menu) {
+    void editDishList(Menu& menu) {
         // Логика редактирования списка продуктов
     }
 
     void editEmployeeAccounts() {
         // Логика редактирования учетных записей сотрудников
+    }
+
+    void addEmployee(string role, string lastName, string firstName, string patronymic, string username, string password, string filename, vector<Employee> employees) {
+        Employee employee{role, lastName, firstName, patronymic, username, password};
+        
+        ofstream outputFile(filename);
+        employees.push_back(employee);
+
+        if (outputFile.is_open()) {
+            for (const auto& employee : employees) {
+                outputFile 
+                    << employee.role << " "
+                    << employee.username << " "
+                    << employee.firstName << " "
+                    << employee.patronymic << " "
+                    << employee.username << " "
+                    << employee.password << " " << endl;
+            }
+
+            outputFile.close();
+            cout << "Сотрудники успешно сохранены в файл." << endl;
+        }
+        else {
+            cerr << "Не удалось открыть файл для записи." << endl;
+        }
+    }
+
+    void getEmployees(vector<Employee> employees, string filename) {
+        ifstream inputFile(filename);
+        if (inputFile.is_open()) {
+            string line;
+            employees.clear();
+            while (getline(inputFile, line)) {
+                stringstream ss(line);
+                string role, lastName, firstName, patronymic, username, password;
+                if (ss >> role >> lastName >> firstName >> patronymic >> username >> password) {
+                    employees.push_back({ role, lastName, firstName, patronymic, username, password });
+                }
+            }
+            inputFile.close();
+        }
+
+        for (const auto& employee : employees) {
+            cout << "------------------------\nРоль: " << employee.role << endl;
+            cout << "Фамилия: " << employee.lastName << endl;
+            cout << "Имя: " << employee.firstName << endl;
+            cout << "Отчество: " << employee.patronymic << endl;
+            cout << "Логин: " << employee.username << endl;
+            cout << "Пароль: " << employee.password << endl;
+            cout << endl;
+        }
     }
 };
 
@@ -225,16 +290,16 @@ public:
     }
 };
 
-class ProductRequest {
+class DishRequest {
 public:
-    map<int, int> products; // Ключ - идентификатор продукта, Значение - количество продукта
+    map<int, int> Dishs; // Ключ - идентификатор продукта, Значение - количество продукта
 };
 
 // Класс складского
 class Storekeeper {
 public:
-    ProductRequest createProductRequest(const Menu& menu) {
-        ProductRequest request;
+    DishRequest createDishRequest(const Menu& menu) {
+        DishRequest request;
 
         // Логика создания заявки на продукты
 
@@ -249,7 +314,7 @@ public:
 // Класс поставщика
 class Supplier {
 public:
-    void processProductRequest(const ProductRequest& request, Menu& menu) {
+    void processDishRequest(const DishRequest& request, Menu& menu) {
         // Логика обработки заявки на продукты и отправки продуктов
     }
 };
@@ -257,11 +322,11 @@ public:
 // Класс бухгалтера
 class Accountant {
 public:
-    void viewProductRequests(const vector<ProductRequest>& requests) {
+    void viewDishRequests(const vector<DishRequest>& requests) {
         // Логика просмотра всех отправленных заявок на продукты
     }
 
-    void viewDeliveries(const vector<ProductRequest>& deliveries) {
+    void viewDeliveries(const vector<DishRequest>& deliveries) {
         // Логика просмотра всех принятых поставок продуктов
     }
 
@@ -280,7 +345,7 @@ public:
         // Логика начала приготовления заказа
     }
 
-    void prepareItem(Order& order, int menuItemIndex, const vector<int>& productNumbers) {
+    void prepareItem(Order& order, int menuItemIndex, const vector<int>& DishNumbers) {
         // Логика приготовления конкретного пункта заказа
     }
 };
@@ -323,17 +388,17 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
             cout << "Для заказа блюда, введите его номер (0 - завершить): " << endl;
             cin >> id;
 
-            string productName = menu.getMenuProductNameById(id);
+            string DishName = menu.getMenuDishNameById(id);
             int AvailableQuantity = menu.GetQuantity(id);
 
-            if (menu.isAvailable(productName, quantity)) {
+            if (menu.isAvailable(DishName, quantity)) {
                 cout << "Количество: " << endl;
                 cin >> quantity;
 
-                if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << productName << endl;
-                else backet->addItem(id, productName, menu.GetPrice(id), quantity);
+                if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << DishName << endl;
+                else backet->addItem(id, DishName, menu.GetPrice(id), quantity);
             }
-            else cout << productName << endl;
+            else cout << DishName << endl;
         }
         catch (exception) {}
     } while (id != 0);
@@ -405,15 +470,60 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
     return 0;
 }
 
+int Admin_function(string filename, vector<Employee> emploees, AuditLog log)
+{
+    int action;
+    unique_ptr<SystemAdministrator> adm = make_unique<SystemAdministrator>();
+
+    string name;
+    string surname;
+    string patronymic;
+    string role;
+    string username;
+    string password;
+
+    do {
+        clearConsole();
+        cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт" << endl;
+        cin >> action;
+
+        if (action == 1) {
+            adm->getEmployees(emploees, filename);
+            cout << "Имя: ";
+            cin >> name;
+            cout << "Фамилия: ";
+            cin >> surname;
+            cout << "Отчество: ";
+            cin >> patronymic;
+            cout << "Роль: ";
+            cin >> role;
+            cout << "Логин: ";
+            cin >> username;
+            cout << "Пароль: ";
+            cin >> password;
+
+            adm->addEmployee(role, surname, name, patronymic, username, password, filename, emploees);
+            log.addEntry("Админ добавил сотрудника");
+        }
+
+    } while (action != 0);
+
+    return 0;
+}
+
 int main()
 {
     bool isLogin = false;
     setlocale(LC_ALL, "Russian");
+
+    string role;
     string login;
     string password;
 
     Restaurant restaurant{1000000};
+    
     Menu menu;
+    AuditLog log;
 
     menu.addToMenu(1, "Бургер", 499, 5);
     menu.addToMenu(2, "Пицца", 1200, 3);
@@ -426,8 +536,54 @@ int main()
     menu.addToMenu(9, "Суши", 999, 7);
     menu.addToMenu(10, "Десерт", 450, 3);
 
+    vector<Employee> employees;
+
+    // Получение пути до папки "Документы" в Windows
+    char* documentsPath;
+    size_t len;
+    _dupenv_s(&documentsPath, &len, "USERPROFILE");
+    string filePath = documentsPath;
+    filePath += "\\Documents\\employees.txt"; //добавляем к пути файл с сотрудниками
+
+    if (documentsPath != nullptr) {
+        // Проверка существования файла
+        ifstream file(filePath);
+        if (file.good()) {
+            cout << "Файл сотрудников существует." << endl;
+            
+            //выгрузка сотрудников из файла в вектор
+            ifstream inputFile(filePath);
+            if (inputFile.is_open()) {
+                string line;
+                while (getline(inputFile, line)) {
+                    stringstream ss(line);
+                    string role, lastName, firstName, patronymic, username, password;
+                    if (ss >> role >> lastName >> firstName >> patronymic >> username >> password) {
+                        employees.push_back({ role, lastName, firstName, patronymic, username, password });
+                    }
+                }
+                inputFile.close();
+            }
+        }
+        else {
+            // Создание файла
+            ofstream newFile(filePath);
+            if (newFile.is_open()) {
+                newFile.close();
+                cout << "Файл сотрудников создан." << endl;
+                Employee admin{ "Admin", "Dergachev", "Daniil", "U", "fox", "fox" }; //добавляем админа 
+                employees.push_back(admin); //засовываем в лист сотрудников
+            }
+            else {
+                cout << "Не удалось создать файл" << endl;
+            }
+        }
+    }
+
     while (!isLogin) {
         cout << "Добро пожаловать в ресторан" << endl;
+        cout << "Ваша роль: ";
+        cin >> role;
         cout << "Ваш логин: ";
         cin >> login;
         cout << "Ваш пароль: ";
@@ -437,8 +593,13 @@ int main()
             Guest(isLogin, menu, restaurant);
             main();
         }
-        else if (login == "admin" && password == "admin") {
-            
+        else if (role == "admin") {
+            for (const auto& employee : employees) {
+                if (employee.username == login && employee.password == password) {
+                    Admin_function(filePath, employees, log);
+                    main();
+                }
+            }
         }
     }
 
