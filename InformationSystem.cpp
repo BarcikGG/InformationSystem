@@ -16,7 +16,7 @@ public:
     double price; //цена продукта (закупочная)
 
     //конструктор продукта
-    Product(int _id, const string& _name, double _price) : id(_id), name(_name), price(_price) {}
+    Product(int _id, const string _name, double _price) : id(_id), name(_name), price(_price) {}
 };
 
 // Класс блюда
@@ -28,7 +28,7 @@ public:
     int quantity; //кол-во блюд в наличии
 
     //конструктор блюда
-    Dish(int _id, const string& _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
+    Dish(int _id, const string _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
 };
 
 // Класс ресторан
@@ -67,12 +67,12 @@ private:
 
 public:
     //функция добавления блюда в меню
-    void addToMenu(int id, const string& name, double price, int quantity) {
+    void addToMenu(int id, const string name, double price, int quantity) {
         Dishs.emplace_back(id, name, price, quantity); //добавление блюда
     }
 
     //функция проверки доступности блюда для заказа
-    bool isAvailable(const string& name, int quantity) {
+    bool isAvailable(const string name, int quantity) {
         for (const auto& Dish : Dishs) { //циклом проходимся по всем позициям меню
             //проверяем, что конкретное блюдо в количество больше или равно запрашиваемому количеству
             if (Dish.name == name && Dish.quantity >= quantity) {
@@ -276,7 +276,7 @@ public:
         }
     }
 
-    void addDish(vector<Dish>& dishes, int id, const string& name, double price, int quantity, const string& filename) {
+    void addDish(vector<Dish>& dishes, int id, string name, double price, int quantity, string filename) {
         Dish dish{ id, name, price, quantity };
         dishes.push_back(dish);
 
@@ -288,23 +288,26 @@ public:
                 << dish.quantity << endl;
             outputFile.close();
             cout << "Блюдо успешно добавлено и сохранено в файл." << endl;
+
         }
         else {
             cerr << "Не удалось открыть файл для записи." << endl;
         }
     }
 
-    void getDishes(vector<Dish>& dishes, const string& filename) {
+    void getDishes(vector<Dish> dishs, string filename) {
         ifstream inputFile(filename);
         if (inputFile.is_open()) {
-            dishes.clear();
-            int id;
-            string name;
-            double price;
-            int quantity;
-            while (inputFile >> id >> name >> price >> quantity) {
-                Dish dish{ id, name, price, quantity };
-                dishes.push_back(dish);
+            string line;
+            dishs.clear();
+            while (getline(inputFile, line)) {
+                stringstream ss(line);
+                string name;
+                int id, quantity;
+                double price;
+                if (ss >> id >> name >> price >> quantity) {
+                    dishs.push_back({ id, name, price, quantity });
+                }
             }
             inputFile.close();
         }
@@ -312,7 +315,7 @@ public:
             cerr << "Не удалось открыть файл для чтения." << endl;
         }
 
-        for (const auto& dish : dishes) {
+        for (const auto& dish : dishs) {
             cout << "------------------------\n";
             cout << "ID: " << dish.id << endl;
             cout << "Название: " << dish.name << endl;
@@ -344,6 +347,11 @@ public:
 class ProductRequest {
 public:
     map<int, int> Dishs_map; // Ключ - идентификатор продукта, Значение - количество продукта
+};
+
+class ProductCraft {
+public:
+    map<int, vector<string>> Dish_craft; //map для приготовления блюда
 };
 
 // Класс складского
@@ -512,7 +520,7 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
     return 0;
 }
 
-int Admin_function(string filename, vector<Employee> emploees, AuditLog log)
+int Admin_function(string filename, vector<Employee> emploees, vector<Dish> dishs, AuditLog log)
 {
     int action;
     unique_ptr<SystemAdministrator> adm = make_unique<SystemAdministrator>();
@@ -546,6 +554,9 @@ int Admin_function(string filename, vector<Employee> emploees, AuditLog log)
 
             adm->addEmployee(role, surname, name, patronymic, username, password, filename, emploees);
             log.addEntry("Админ добавил сотрудника");
+        }
+        else if (action == 2) {
+            adm->getDishes(dishs, filename);
         }
 
     } while (action != 0);
@@ -644,7 +655,7 @@ int main()
     AuditLog log;
 
     vector<Employee> employees;
-    
+    vector<Dish> dishs;
 
     // Получение пути до папки "Документы" в Windows
     char* documentsPath;
@@ -674,7 +685,7 @@ int main()
         else if (role == "admin") {
             for (const auto& employee : employees) {
                 if (employee.username == login && employee.password == password) {
-                    Admin_function(filePath, employees, log);
+                    Admin_function(filePath, employees, dishs, log);
                     main();
                 }
             }
