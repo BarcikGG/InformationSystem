@@ -13,10 +13,10 @@ class Product {
 public:
     int id; //id продукта
     string name; //название продукта
-    double price; //цена продукта (закупочная)
+    int price; //цена продукта (закупочная)
 
     //конструктор продукта
-    Product(int _id, const string _name, double _price) : id(_id), name(_name), price(_price) {}
+    Product(int _id, const string _name, int _price) : id(_id), name(_name), price(_price) {}
 };
 
 // Класс блюда
@@ -24,33 +24,33 @@ class Dish {
 public:
     int id; //id блюда
     string name; //название блюда
-    double price; //цена блюда
+    int price; //цена блюда
     int quantity; //кол-во блюд в наличии
 
     //конструктор блюда
-    Dish(int _id, const string _name, int _quantity, double _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
+    Dish(int _id, const string _name, int _quantity, int _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
 };
 
 // Класс ресторан
 class Restaurant {
 private:
-    double balance; //баланс рестика
+    int balance; //баланс рестика
 
 public:
-    Restaurant(double initialBalance) : balance(initialBalance) {} //конструктор рестика
+    Restaurant(int initialBalance) : balance(initialBalance) {} //конструктор рестика
 
     //функция возвращающая баланс ресторана
-    double getBalance() const {
+    int getBalance() const {
         return balance;
     }
 
     //функция для пополнения баланса ресторана
-    void deposit(double amount) {
+    void deposit(int amount) {
         balance += amount; //пополняем баланс
     }
 
     //функция для списания средств со счета ресторана
-    bool withdraw(double amount) {
+    bool withdraw(int amount) {
         if (amount <= balance) { //проверяем, что списываем меньше или сумму баланса рестика
             balance -= amount; //списываем бабки
             return true;  // Успешное списание средств
@@ -66,8 +66,11 @@ private:
     vector<Dish> Dishs; //лист блюд для меню
 
 public:
+    //конструктор меню
+    Menu(vector<Dish> _dishs) : Dishs(_dishs) {}
+
     //функция добавления блюда в меню
-    void addToMenu(int id, const string name, double price, int quantity) {
+    void addToMenu(int id, const string name, int price, int quantity) {
         Dishs.emplace_back(id, name, price, quantity); //добавление блюда
     }
 
@@ -104,7 +107,7 @@ public:
     }
 
     //функция возвращающая цену блюда
-    double GetPrice(int id) {
+    int GetPrice(int id) {
         for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
             if (Dish.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
                 return Dish.price; //возвращаем цену блюда
@@ -131,7 +134,7 @@ private:
 
 public:
     //функция добавления блюда в заказ
-    void addItem(int id, string name, double price, int quantity) {
+    void addItem(int id, string name, int price, int quantity) {
         items.emplace_back(id, name, price, quantity); //добавление блюда
     }
 
@@ -144,8 +147,8 @@ public:
     }
 
     //функция для подсчета стоимости всего заказа
-    double Amount() {
-        double amount = 0; //обнуляем стоимость
+    int Amount() {
+        int amount = 0; //обнуляем стоимость
         for (const auto& item : items) { //проходимся по всем пунктам заказа
             amount += item.price * item.quantity; //прибавляем к итоговой стоимости стоимость блюда умноженного на количество этого блюда
         }
@@ -235,7 +238,7 @@ public:
             for (const auto& employee : employees) {
                 outputFile 
                     << employee.role << " "
-                    << employee.username << " "
+                    << employee.lastName << " "
                     << employee.firstName << " "
                     << employee.patronymic << " "
                     << employee.username << " "
@@ -246,7 +249,7 @@ public:
             cout << "Сотрудники успешно сохранены в файл." << endl;
         }
         else {
-            cerr << "Не удалось открыть файл для записи." << endl;
+            cerr << "Не удалось открыть файл сотрудников для записи." << endl;
         }
     }
 
@@ -276,22 +279,24 @@ public:
         }
     }
 
-    void addDish(vector<Dish>& dishes, int id, string name, double price, int quantity, string filename) {
+    void addDish(vector<Dish>& dishes, int id, string name, int price, int quantity, string filename) {
         Dish dish{ id, name, price, quantity };
         dishes.push_back(dish);
 
         ofstream outputFile(filename);
         if (outputFile.is_open()) {
-            outputFile << dish.id << " "
-                << dish.name << " "
-                << dish.price << " "
-                << dish.quantity << endl;
+            for (const auto& dish : dishes) {
+                outputFile << dish.id << " "
+                    << dish.name << " "
+                    << dish.price << " "
+                    << dish.quantity << endl;
+            }
             outputFile.close();
             cout << "Блюдо успешно добавлено и сохранено в файл." << endl;
 
         }
         else {
-            cerr << "Не удалось открыть файл для записи." << endl;
+            cout << "Не удалось открыть файл блюд для записи." << endl;
         }
     }
 
@@ -303,8 +308,7 @@ public:
             while (getline(inputFile, line)) {
                 stringstream ss(line);
                 string name;
-                int id, quantity;
-                double price;
+                int id, quantity, price;
                 if (ss >> id >> name >> price >> quantity) {
                     dishs.push_back({ id, name, price, quantity });
                 }
@@ -312,7 +316,7 @@ public:
             inputFile.close();
         }
         else {
-            cerr << "Не удалось открыть файл для чтения." << endl;
+            cout << "Не удалось открыть файл блюд для чтения." << endl;
         }
 
         for (const auto& dish : dishs) {
@@ -446,7 +450,7 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
     char answer; //ответ гостя по заказа (да/нет)
     char action; //действие гостя (просмотр статуса или смена роли)
     int status = 0; //статус заказа
-    double guest_amount; //сумма которую заплатил гость
+    int guest_amount; //сумма которую заплатил гость
 
     unique_ptr<GuestOrderBasket> backet = make_unique<GuestOrderBasket>(); // создание умного указателя корзины
     unique_ptr<Order> order = make_unique<Order>(); // создание умного указателя заказа
@@ -588,10 +592,16 @@ void CheckEmplFile(char* documentsPath, string filename, vector<Employee> employ
         else {
             // Создание файла
             ofstream newFile(filename);
+            Employee admin{ "Admin", "Dergachev", "Daniil", "U", "fox", "fox" }; //добавляем админа 
             if (newFile.is_open()) {
+                newFile << admin.role << " "
+                    << admin.lastName << " "
+                    << admin.firstName << " "
+                    << admin.patronymic << " "
+                    << admin.username << " "
+                    << admin.password << " " << endl;
                 newFile.close();
                 cout << "Файл сотрудников создан." << endl;
-                Employee admin{ "Admin", "Dergachev", "Daniil", "U", "fox", "fox" }; //добавляем админа 
                 employees.push_back(admin); //добавляем в лист сотрудников
             }
             else {
@@ -601,7 +611,7 @@ void CheckEmplFile(char* documentsPath, string filename, vector<Employee> employ
     }
 }
 
-void CheckDishsFile(char* documentsPath, string filename, Menu menu) {
+void CheckDishsFile(char* documentsPath, string filename, Menu menu, vector<Dish> dishs) {
     if (documentsPath != nullptr) {
         // Проверка существования файла блюд
         ifstream file(filename);
@@ -616,7 +626,8 @@ void CheckDishsFile(char* documentsPath, string filename, Menu menu) {
                     stringstream ss(line);
                     string id, name, price, quantity;
                     if (ss >> id >> name >> price >> quantity) {
-                        menu.addToMenu(stoi(id), name, stod(price), stoi(quantity));
+                        //menu.addToMenu(stoi(id), name, stod(price), stoi(quantity));
+                        dishs.push_back({stoi(id), name, stoi(price), stoi(quantity)});
                     }
                 }
                 inputFile.close();
@@ -625,13 +636,23 @@ void CheckDishsFile(char* documentsPath, string filename, Menu menu) {
         else {
             // Создание файла
             ofstream newFile(filename);
+            /*menu.addToMenu(1, "Бургер", 499, 5);
+            menu.addToMenu(2, "Пицца", 1200, 3);
+            menu.addToMenu(3, "Салат", 399, 2);*/
+
+            dishs.push_back({ 1, "Бургер", 499, 5 });
+            dishs.push_back({ 2, "Пицца", 1200, 3 });
+            dishs.push_back({ 3, "Салат", 399, 2 });
+            
             if (newFile.is_open()) {
+                for (const auto& dish : dishs) {
+                    newFile << dish.id << " "
+                        << dish.name << " "
+                        << dish.price << " "
+                        << dish.quantity << endl;
+                }
                 newFile.close();
                 cout << "Файл блюд создан." << endl;
-                
-                menu.addToMenu(1, "Бургер", 499.99, 5);
-                menu.addToMenu(2, "Пицца", 1200.99, 3);
-                menu.addToMenu(3, "Салат", 399.99, 2);
             }
             else {
                 cout << "Не удалось создать файл" << endl;
@@ -651,11 +672,11 @@ int main()
 
     Restaurant restaurant{1000000};
     
-    Menu menu;
     AuditLog log;
 
     vector<Employee> employees;
     vector<Dish> dishs;
+    Menu menu(dishs);
 
     // Получение пути до папки "Документы" в Windows
     char* documentsPath;
@@ -666,8 +687,9 @@ int main()
     filePath += "\\Documents\\employees.txt"; //добавляем к пути файл с сотрудниками
     CheckEmplFile(documentsPath, filePath, employees);
 
+    filePath = documentsPath;
     filePath += "\\Documents\\dishes.txt"; //добавляем к пути файл с блюдами
-    CheckDishsFile(documentsPath, filePath, menu);
+    CheckDishsFile(documentsPath, filePath, menu, dishs);
 
     while (!isLogin) {
         cout << "Добро пожаловать в ресторан" << endl;
