@@ -620,7 +620,7 @@ int Admin_function(string filename, string fileDish, string fileProd, vector<Emp
 
     do {
         clearConsole();
-        cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт\n4 - Логи" << endl;
+        cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт\n4 - Логи\n0 - Выход" << endl;
         cin >> action;
 
         if (action == 1) {
@@ -682,7 +682,10 @@ int Admin_function(string filename, string fileDish, string fileProd, vector<Emp
             log.addEntry("Админ добавил продукт");
         }
         else if (action == 4) {
+            string empty;
             log.printEntries();
+            cout << "Введите любой символ для выхода" << endl;
+            cin >> empty;
         }
 
     } while (action != 0);
