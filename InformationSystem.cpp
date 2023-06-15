@@ -24,11 +24,13 @@ class Dish {
 public:
     int id; //id блюда
     string name; //название блюда
+    vector<string> craft; //рецепт
+    int time; //время готовки
     int price; //цена блюда
     int quantity; //кол-во блюд в наличии
 
     //конструктор блюда
-    Dish(int _id, const string _name, int _quantity, int _price) : id(_id), name(_name), quantity(_quantity), price(_price) {} 
+    Dish(int _id, const string _name, vector<string> _craft, int _time, int _quantity, int _price) : id(_id), name(_name), craft(_craft), time(_time), quantity(_quantity), price(_price) {}
 };
 
 // Класс ресторан
@@ -71,7 +73,7 @@ public:
 
     //функция добавления блюда в меню
     void addToMenu(int id, const string name, int price, int quantity) {
-        Dishs.emplace_back(id, name, price, quantity); //добавление блюда
+        //Dishs.emplace_back(id, name, price, quantity); //добавление блюда
     }
 
     //функция проверки доступности блюда для заказа
@@ -135,7 +137,7 @@ private:
 public:
     //функция добавления блюда в заказ
     void addItem(int id, string name, int price, int quantity) {
-        items.emplace_back(id, name, price, quantity); //добавление блюда
+        //items.emplace_back(id, name, price, quantity); //добавление блюда
     }
 
     //вывод корзины в консоль
@@ -279,15 +281,22 @@ public:
         }
     }
 
-    void addDish(vector<Dish>& dishes, int id, string name, int price, int quantity, string filename) {
-        Dish dish{ id, name, price, quantity };
+    void addDish(vector<Dish>& dishes, Dish dish, string filename) {
+        
         dishes.push_back(dish);
 
         ofstream outputFile(filename);
         if (outputFile.is_open()) {
             for (const auto& dish : dishes) {
                 outputFile << dish.id << " "
-                    << dish.name << " "
+                    << dish.name << " ";
+                    
+                    // Записываем вектор craft в файл
+                    for (const auto& ingredient : dish.craft) {
+                        outputFile << ingredient << " ";
+                    }
+
+                    outputFile << dish.time << " "
                     << dish.price << " "
                     << dish.quantity << endl;
             }
@@ -304,13 +313,19 @@ public:
         ifstream inputFile(filename);
         if (inputFile.is_open()) {
             string line;
-            dishs.clear();
             while (getline(inputFile, line)) {
                 stringstream ss(line);
-                string name;
-                int id, quantity, price;
-                if (ss >> id >> name >> price >> quantity) {
-                    dishs.push_back({ id, name, price, quantity });
+
+                string id, name, time, price, quantity;
+                if (ss >> id >> name) {
+                    vector<string> craft;
+                    string ingredient;
+                    while (ss >> ingredient) {
+                        craft.push_back(ingredient);
+                    }
+                    if (ss >> time >> price >> quantity) {
+                        dishs.push_back({ stoi(id), name, craft, stoi(time), stoi(price), stoi(quantity) });
+                    }
                 }
             }
             inputFile.close();
@@ -320,9 +335,17 @@ public:
         }
 
         for (const auto& dish : dishs) {
+            string ings;
             cout << "------------------------\n";
             cout << "ID: " << dish.id << endl;
             cout << "Название: " << dish.name << endl;
+
+            for (const auto& ing : dish.craft) {
+                ings += ing + ", ";
+            }
+
+            cout << "Рецепт: " << ings << endl;
+            cout << "Время приготовления: " << dish.time << endl;
             cout << "Цена: " << dish.price << endl;
             cout << "Количество: " << dish.quantity << endl;
             cout << endl;
@@ -535,6 +558,10 @@ int Admin_function(string filename, vector<Employee> emploees, vector<Dish> dish
     string username;
     string password;
 
+    int id, quantity, price, time;
+    string ingredients;
+    vector<string> craft;
+
     do {
         clearConsole();
         cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт" << endl;
@@ -560,6 +587,31 @@ int Admin_function(string filename, vector<Employee> emploees, vector<Dish> dish
         }
         else if (action == 2) {
             adm->getDishes(dishs, filename);
+            cout << "Id: ";
+            cin >> id;
+            cout << "Название: ";
+            cin >> name;
+            cout << "Цена: ";
+            cin >> price;
+            cout << "Время готовки: ";
+            cin >> time;
+            cout << "Кол-во: ";
+            cin >> quantity;
+            
+            cout << "Рецепт: ";
+            cin.ignore(); // Очищаем символ новой строки из входного буфера
+            getline(cin, ingredients);
+
+            istringstream iss(ingredients); //поток ввода из строки (разделение строки на слова)
+            string word; //инициализируем строку для занесения в нее слова
+
+            while (iss >> word) {
+                craft.push_back(word);
+            }
+
+            Dish new_dish{ id, name, craft, time, price, quantity };
+            adm->addDish(dishs, new_dish, filename);
+            log.addEntry("Админ добавил пункт меню");
         }
 
     } while (action != 0);
@@ -618,16 +670,23 @@ vector<Dish> CheckDishsFile(char* documentsPath, string filename, Menu menu, vec
         if (file.good()) {
             cout << "Файл блюд существует." << endl;
 
-            //выгрузка блюд из файла в вектор
+            // выгрузка блюд из файла в вектор
             ifstream inputFile(filename);
             if (inputFile.is_open()) {
                 string line;
                 while (getline(inputFile, line)) {
                     stringstream ss(line);
-                    string id, name, price, quantity;
-                    if (ss >> id >> name >> price >> quantity) {
-                        //menu.addToMenu(stoi(id), name, stod(price), stoi(quantity));
-                        dishs.push_back({stoi(id), name, stoi(price), stoi(quantity)});
+
+                    string id, name, time, price, quantity;
+                    if (ss >> id >> name) {
+                        vector<string> craft;
+                        string ingredient;
+                        while (ss >> ingredient) {
+                            craft.push_back(ingredient);
+                        }
+                        if (ss >> time >> price >> quantity) {
+                            dishs.push_back({ stoi(id), name, craft, stoi(time), stoi(price), stoi(quantity) });
+                        }
                     }
                 }
                 inputFile.close();
@@ -636,26 +695,27 @@ vector<Dish> CheckDishsFile(char* documentsPath, string filename, Menu menu, vec
         else {
             // Создание файла
             ofstream newFile(filename);
-            /*menu.addToMenu(1, "Бургер", 499, 5);
-            menu.addToMenu(2, "Пицца", 1200, 3);
-            menu.addToMenu(3, "Салат", 399, 2);*/
 
-            dishs.push_back({ 1, "Бургер", 499, 5 });
-            dishs.push_back({ 2, "Пицца", 1200, 3 });
-            dishs.push_back({ 3, "Салат", 399, 2 });
+            dishs.push_back({ 1, "Бургер", {"булка", "котлета", "соус", "зелень"}, 3, 499, 5});
+            dishs.push_back({ 2, "Пицца", {"тесто", "паста", "колбаса", "сыр"}, 30, 1200, 3 });
+            dishs.push_back({ 3, "Салат", {"зелень", "мясо", "томаты"}, 8, 399, 2 });
             
             if (newFile.is_open()) {
                 for (const auto& dish : dishs) {
                     newFile << dish.id << " "
-                        << dish.name << " "
+                        << dish.name << " ";
+
+                    // Записываем вектор craft в файл
+                    for (const auto& ingredient : dish.craft) {
+                        newFile << ingredient << " ";
+                    }
+
+                    newFile << dish.time << " "
                         << dish.price << " "
                         << dish.quantity << endl;
                 }
                 newFile.close();
                 cout << "Файл блюд создан." << endl;
-            }
-            else {
-                cout << "Не удалось создать файл" << endl;
             }
         }
     }
