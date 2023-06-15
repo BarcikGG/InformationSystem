@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <filesystem>
+#include <ctime>
 
 using namespace std;
 
@@ -71,10 +72,10 @@ public:
     //конструктор меню
     Menu(vector<Dish> _dishs) : Dishs(_dishs) {}
 
-    //функция добавления блюда в меню
-    void addToMenu(int id, const string name, int price, int quantity) {
-        //Dishs.emplace_back(id, name, price, quantity); //добавление блюда
-    }
+    ////функция добавления блюда в меню
+    //void addToMenu(int id, const string name, int price, int quantity) {
+    //    //Dishs.emplace_back(id, name, price, quantity); //добавление блюда
+    //}
 
     //функция проверки доступности блюда для заказа
     bool isAvailable(const string name, int quantity) {
@@ -84,7 +85,7 @@ public:
                 return true; //возвращаем true если блюдо есть
             }
         }
-        return false; //блюд не хватает
+        return false; //блюдо не доступно
     }
     
     //функция  вывода блюд меню
@@ -354,6 +355,16 @@ public:
 
 };
 
+string currentDateTime() {
+    time_t t = time(nullptr);
+    tm now;
+    localtime_s(&now, &t);
+
+    char buffer[128];
+    strftime(buffer, sizeof(buffer), "%m-%d-%Y %X", &now);
+    return buffer;
+}
+
 // Класс журнала аудита
 class AuditLog {
 private:
@@ -361,7 +372,8 @@ private:
 
 public:
     void addEntry(const string& entry) {
-        entries.push_back(entry);
+        string log = currentDateTime() + entry;
+        entries.push_back(log);
     }
 
     void printEntries() const {
@@ -564,7 +576,7 @@ int Admin_function(string filename, vector<Employee> emploees, vector<Dish> dish
 
     do {
         clearConsole();
-        cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт" << endl;
+        cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт\n4 - Логи" << endl;
         cin >> action;
 
         if (action == 1) {
@@ -612,6 +624,12 @@ int Admin_function(string filename, vector<Employee> emploees, vector<Dish> dish
             Dish new_dish{ id, name, craft, time, price, quantity };
             adm->addDish(dishs, new_dish, filename);
             log.addEntry("Админ добавил пункт меню");
+        }
+        else if (action == 3) {
+            
+        }
+        else if (action == 4) {
+            log.printEntries();
         }
 
     } while (action != 0);
@@ -663,7 +681,7 @@ vector<Employee> CheckEmplFile(char* documentsPath, string filename, vector<Empl
     return employees;
 }
 
-vector<Dish> CheckDishsFile(char* documentsPath, string filename, Menu menu, vector<Dish> dishs) {
+vector<Dish> CheckDishsFile(char* documentsPath, string filename, vector<Dish> dishs) {
     if (documentsPath != nullptr) {
         // Проверка существования файла блюд
         ifstream file(filename);
@@ -737,7 +755,6 @@ int main()
 
     vector<Employee> employees;
     vector<Dish> dishs;
-    Menu menu(dishs);
 
     // Получение пути до папки "Документы" в Windows
     char* documentsPath;
@@ -750,7 +767,9 @@ int main()
 
     filePath = documentsPath;
     filePath += "\\Documents\\dishes.txt"; //добавляем к пути файл с блюдами
-    dishs = CheckDishsFile(documentsPath, filePath, menu, dishs);
+    dishs = CheckDishsFile(documentsPath, filePath, dishs);
+
+    Menu menu(dishs);
 
     while (!isLogin) {
         clearConsole();
