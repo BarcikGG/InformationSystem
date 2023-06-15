@@ -496,7 +496,6 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
                     if (guest_amount >= backet->Amount()) {
                         clearConsole();
                         restaurant.deposit(guest_amount);
-                        cout << "Статус: ";
                         order->confirmOrder();
                         cout << "Спасибо! Ваш заказ передан на кухню." << endl;
                         break;
@@ -568,7 +567,7 @@ int Admin_function(string filename, vector<Employee> emploees, vector<Dish> dish
     return 0;
 }
 
-void CheckEmplFile(char* documentsPath, string filename, vector<Employee> employees) {
+vector<Employee> CheckEmplFile(char* documentsPath, string filename, vector<Employee> employees) {
     if (documentsPath != nullptr) {
         // Проверка существования файла сотрудников
         ifstream file(filename);
@@ -609,9 +608,10 @@ void CheckEmplFile(char* documentsPath, string filename, vector<Employee> employ
             }
         }
     }
+    return employees;
 }
 
-void CheckDishsFile(char* documentsPath, string filename, Menu menu, vector<Dish> dishs) {
+vector<Dish> CheckDishsFile(char* documentsPath, string filename, Menu menu, vector<Dish> dishs) {
     if (documentsPath != nullptr) {
         // Проверка существования файла блюд
         ifstream file(filename);
@@ -659,6 +659,7 @@ void CheckDishsFile(char* documentsPath, string filename, Menu menu, vector<Dish
             }
         }
     }
+    return dishs;
 }
 
 int main()
@@ -666,7 +667,7 @@ int main()
     bool isLogin = false;
     setlocale(LC_ALL, "Russian");
 
-    string role;
+    int role;
     string login;
     string password;
 
@@ -685,16 +686,16 @@ int main()
     string filePath = documentsPath;
     
     filePath += "\\Documents\\employees.txt"; //добавляем к пути файл с сотрудниками
-    CheckEmplFile(documentsPath, filePath, employees);
+    employees = CheckEmplFile(documentsPath, filePath, employees);
 
     filePath = documentsPath;
     filePath += "\\Documents\\dishes.txt"; //добавляем к пути файл с блюдами
-    CheckDishsFile(documentsPath, filePath, menu, dishs);
+    dishs = CheckDishsFile(documentsPath, filePath, menu, dishs);
 
     while (!isLogin) {
+        clearConsole();
+
         cout << "Добро пожаловать в ресторан" << endl;
-        cout << "Ваша роль: ";
-        cin >> role;
         cout << "Ваш логин: ";
         cin >> login;
         cout << "Ваш пароль: ";
@@ -704,11 +705,23 @@ int main()
             Guest(isLogin, menu, restaurant);
             main();
         }
-        else if (role == "admin") {
+        else {
             for (const auto& employee : employees) {
                 if (employee.username == login && employee.password == password) {
-                    Admin_function(filePath, employees, dishs, log);
-                    main();
+                    cout << "Ваша роль: \n1 - admin\n2 - sklad\n3 - povar\n4 - buhgalter\n5 - waiter\n6 - seller" << endl;
+                    cin >> role;
+
+                    switch (role)
+                    {
+                    case 1:
+                        isLogin = true;
+                        Admin_function(filePath, employees, dishs, log);
+                        main();
+                        break;
+                    default:
+                        cout << "Роль не найдена" << endl;
+                        break;
+                    }
                 }
             }
         }
