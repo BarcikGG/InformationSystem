@@ -256,6 +256,48 @@ public:
         }
     }
 
+    void editEmployee(string username, string newRole, string newSurname, string newPassword, string filename, vector<Employee> employees) {
+        bool found = false;
+
+        // Найти сотрудника по имени пользователя
+        for (auto& employee : employees) {
+            if (employee.username == username) {
+                // Обновить роль и пароль сотрудника
+                employee.role = newRole;
+                employee.lastName = newSurname;
+                employee.password = newPassword;
+                found = true;
+                break;
+            }
+        }
+
+        if (found) {
+            ofstream outputFile(filename);
+
+            if (outputFile.is_open()) {
+                // Записать обновленные данные в файл
+                for (const auto& employee : employees) {
+                    outputFile
+                        << employee.role << " "
+                        << employee.lastName << " "
+                        << employee.firstName << " "
+                        << employee.patronymic << " "
+                        << employee.username << " "
+                        << employee.password << endl;
+                }
+
+                outputFile.close();
+                cout << "Сотрудник успешно отредактирован и сохранен в файл" << endl;
+            }
+            else {
+                cout << "Не удалось открыть файл сотрудников для записи" << endl;
+            }
+        }
+        else {
+            cout << "Сотрудник с логином " << username << " не найден" << endl;
+        }
+    }
+
     void getEmployees(vector<Employee> employees, string filename) {
         ifstream inputFile(filename);
         if (inputFile.is_open()) {
@@ -375,6 +417,44 @@ public:
         }
     }
 
+    void editProduct(string name, int newId, int newPrice, vector<Product> products, string fileProd) {
+        bool found = false;
+
+        // Найти продукт по ID
+        for (auto& product : products) {
+            if (product.name == name) {
+                //обновляем id и цену продукта
+                product.id = newId;
+                product.price = newPrice;
+                found = true;
+                break;
+            }
+        }
+
+        if (found) {
+            ofstream outputFile(fileProd);
+
+            if (outputFile.is_open()) {
+                // Записать обновленные данные в файл
+                for (const auto& product : products) {
+                    outputFile
+                        << product.id << " "
+                        << product.name << " "
+                        << product.price << endl;
+                }
+
+                outputFile.close();
+                cout << "Продукт успешно отредактирован и сохранен в файл." << endl;
+            }
+            else {
+                cout << "Не удалось открыть файл продуктов для записи." << endl;
+            }
+        }
+        else {
+            cout << "Продукт с названием: " << name << " не найден." << endl;
+        }
+    }
+
     void getProducts(vector<Product> products, string filename) {
         ifstream inputFile(filename);
         if (inputFile.is_open()) {
@@ -389,7 +469,7 @@ public:
             }
             inputFile.close();
         }
-
+        cout << "Продукты" << endl;
         for (const auto& product : products) {
             cout << "------------------------\nID: " << product.id << endl;
             cout << "Название: " << product.name << endl;
@@ -414,16 +494,40 @@ string currentDateTime() {
 class AuditLog {
 private:
     vector<string> entries;
+    string pathLogs;
 
 public:
+    AuditLog(string _path) : pathLogs(_path) {}
+
     void addEntry(const string& entry) {
-        string log = currentDateTime() + entry;
+        string log = currentDateTime() + ": " + entry;
+        entries.push_back(log);
+        saveLogs(pathLogs);
+    }
+
+    void addOldLogs(const string& oldLog) {
+        string log = oldLog;
         entries.push_back(log);
     }
 
     void printEntries() const {
-        for (const auto& entry : entries) {
+        for (const auto entry : entries) {
             cout << entry << endl;
+        }
+    }
+
+    void saveLogs(string& filename) {
+        ofstream outputFile(filename);
+
+        if (outputFile.is_open()) {
+            for (const auto& log : entries) {
+                outputFile << log << " " << endl;
+            }
+            outputFile.close();
+            cout << "Продукты успешно сохранены в файл." << endl;
+        }
+        else {
+            cerr << "Не удалось открыть файл продуктов для записи." << endl;
         }
     }
 };
@@ -602,7 +706,7 @@ int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
     return 0;
 }
 
-int Admin_function(string filename, string fileDish, string fileProd, vector<Employee> emploees, vector<Dish> dishs, vector<Product> products, AuditLog log)
+int Admin_function(string& filename, string& fileDish, string& fileProd, vector<Employee>& employees, vector<Dish>& dishs, vector<Product>& products, AuditLog log)
 {
     int action;
     unique_ptr<SystemAdministrator> adm = make_unique<SystemAdministrator>();
@@ -620,11 +724,12 @@ int Admin_function(string filename, string fileDish, string fileProd, vector<Emp
 
     do {
         clearConsole();
-        cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт\n4 - Логи\n0 - Выход" << endl;
+        cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт" <<
+            "\n5 - Изменить сотрудника\n6 - Изменить блюдо\n7 - Изменить продукт\n4 - Логи\n0 - Выход" << endl;
         cin >> action;
 
         if (action == 1) {
-            adm->getEmployees(emploees, filename);
+            adm->getEmployees(employees, filename);
             cout << "Имя: ";
             cin >> name;
             cout << "Фамилия: ";
@@ -638,11 +743,12 @@ int Admin_function(string filename, string fileDish, string fileProd, vector<Emp
             cout << "Пароль: ";
             cin >> password;
 
-            adm->addEmployee(role, surname, name, patronymic, username, password, filename, emploees);
-            log.addEntry("Админ добавил сотрудника");
+            adm->addEmployee(role, surname, name, patronymic, username, password, filename, employees);
+            log.addEntry("Админ добавил сотрудника" + surname + " " + name);
         }
         else if (action == 2) {
             adm->getDishes(dishs, fileDish);
+            adm->getProducts(products, fileProd);
             cout << "Id: ";
             cin >> id;
             cout << "Название: ";
@@ -667,7 +773,7 @@ int Admin_function(string filename, string fileDish, string fileProd, vector<Emp
 
             Dish new_dish{ id, name, craft, time, price, quantity };
             adm->addDish(dishs, new_dish, fileDish);
-            log.addEntry("Админ добавил пункт меню");
+            log.addEntry("Админ добавил пункт меню: " + name);
         }
         else if (action == 3) {
             adm->getProducts(products, fileProd);
@@ -679,13 +785,43 @@ int Admin_function(string filename, string fileDish, string fileProd, vector<Emp
             cin >> price;
 
             adm->addProduct(id, name, price, products, fileProd);
-            log.addEntry("Админ добавил продукт");
+            log.addEntry("Админ добавил продукт: " + name);
         }
         else if (action == 4) {
             string empty;
             log.printEntries();
             cout << "Введите любой символ для выхода" << endl;
             cin >> empty;
+        }
+        else if (action == 5) {
+            adm->getEmployees(employees, filename);
+            cout << "Введите логин сотрудника: " << endl;
+            cin >> username;
+            cout << "Новая роль: " << endl;
+            cin >> role;
+            cout << "Новая фамилия: " << endl;
+            cin >> surname;
+            cout << "Новый пароль: " << endl;
+            cin >> password;
+
+            adm->editEmployee(username, role, surname, password, filename, employees);
+            log.addEntry("Админ изменил сотрудника: " + surname);
+        }
+        else if (action == 6) {
+            
+        }
+        else if (action == 7) {
+            int newPrice;
+            adm->getProducts(products, fileProd);
+            cout << "Название продукта: " << endl;
+            cin >> name;
+            cout << "Новый id: " << endl;
+            cin >> id;
+            cout << "Новая цена: " << endl;
+            cin >> newPrice;
+
+            adm->editProduct(name, id, newPrice, products, fileProd);
+            log.addEntry("Админ изменил продукт: " + name);
         }
 
     } while (action != 0);
@@ -770,9 +906,9 @@ vector<Dish> CheckDishsFile(char* documentsPath, string filename, vector<Dish> d
             // Создание файла
             ofstream newFile(filename);
 
-            dishs.push_back({ 1, "Бургер", {"булка", "котлета", "соус", "зелень"}, 3, 499, 5});
-            dishs.push_back({ 2, "Пицца", {"тесто", "паста", "колбаса", "сыр"}, 30, 1200, 3 });
-            dishs.push_back({ 3, "Салат", {"зелень", "мясо", "томаты"}, 8, 399, 2 });
+            dishs.push_back({ 1, "Burger", {"bread", "cutlet", "sauce", "greens"}, 3, 499, 5});
+            dishs.push_back({ 2, "Pizza", {"dough", "paste", "sausage", "cheese"}, 30, 1200, 3 });
+            dishs.push_back({ 3, "Salat", {"greens", "meat", "tomato"}, 8, 399, 2 });
             
             if (newFile.is_open()) {
                 for (const auto& dish : dishs) {
@@ -824,9 +960,9 @@ vector<Product> CheckProductsFile(char* documentsPath, string filename, vector<P
             // Создание файла
             ofstream newFile(filename);
 
-            products.push_back({ 1, "мясо", 450});
-            products.push_back({ 2, "рис", 50});
-            products.push_back({ 3, "помидор", 180});
+            products.push_back({ 1, "meat", 450});
+            products.push_back({ 2, "ris", 50});
+            products.push_back({ 3, "tomato", 180});
 
             if (newFile.is_open()) {
                 for (const auto& product : products) {
@@ -842,6 +978,47 @@ vector<Product> CheckProductsFile(char* documentsPath, string filename, vector<P
     return products;
 }
 
+void CheckLogsFile(char* documentsPath, string filename, AuditLog log) {
+    
+    auto f = [&log](string oldLog) {
+        log.addOldLogs(oldLog);
+    };
+
+    if (documentsPath != nullptr) {
+        // Проверка существования файла логов
+        ifstream file(filename);
+        if (file.good()) {
+            cout << "Файл логов существует." << endl;
+
+            // выгрузка логов из файла в вектор
+            ifstream inputFile(filename);
+            if (inputFile.is_open()) {
+                string line;
+                while (getline(inputFile, line)) {
+                    stringstream ss(line);
+
+                    string current_log;
+                    if (ss >> current_log) {
+                        if (ss >> current_log) {
+                            f(current_log);
+                        }
+                    }
+                }
+                inputFile.close();
+            }
+        }
+        else {
+            // Создание файла
+            ofstream newFile(filename);
+
+            if (newFile.is_open()) {
+                newFile.close();
+                cout << "Файл логов создан." << endl;
+            }
+        }
+    }
+}
+
 int main()
 {
     bool isLogin = false;
@@ -852,8 +1029,6 @@ int main()
     string password;
 
     Restaurant restaurant{1000000};
-    
-    AuditLog log;
 
     vector<Employee> employees;
     vector<Dish> dishs;
@@ -873,8 +1048,13 @@ int main()
     dishs = CheckDishsFile(documentsPath, fileDish, dishs);
 
     string fileProd = documentsPath;
-    fileProd += "\\Documents\\products.txt"; //добавляем к пути файл с блюдами
+    fileProd += "\\Documents\\products.txt"; //добавляем к пути файл с продуктами
     products = CheckProductsFile(documentsPath, fileProd, products);
+
+    string fileLog = documentsPath;
+    fileLog += "\\Documents\\logs.txt"; //добавляем к пути файл с логами
+    AuditLog log(fileLog);
+    CheckLogsFile(documentsPath, fileLog, log);
 
     Menu menu(dishs);
 
