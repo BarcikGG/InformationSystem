@@ -6,8 +6,14 @@
 #include <vector>
 #include <filesystem>
 #include <ctime>
+#include "..\HashLib\HashPass.h"
 
 using namespace std;
+
+//метод для очистки консоли
+void clearConsole() {
+    system("cls");
+}
 
 // Класс блюда
 class Product {
@@ -511,7 +517,7 @@ public:
     }
 
     void printEntries() const {
-        for (const auto entry : entries) {
+        for (const auto& entry : entries) {
             cout << entry << endl;
         }
     }
@@ -534,7 +540,7 @@ public:
 
 class ProductRequest {
 public:
-    map<int, int> Dishs_map; // Ключ - идентификатор продукта, Значение - количество продукта
+    map<int, int> Product_map; // Ключ - идентификатор продукта, Значение - количество продукта
 };
 
 class ProductCraft {
@@ -544,11 +550,43 @@ public:
 
 // Класс складского
 class Storekeeper {
+    Product product;
+    vector<Product> products;
 public:
-    ProductRequest createProductRequest(const Menu& menu) {
-        ProductRequest request;
+    Storekeeper(Product _product, vector<Product> _products) : product(_product), products(_products) {}
 
-        // Логика создания заявки на продукты
+    ProductRequest createProductRequest(Restaurant& restaurant, ProductRequest request) {
+        string name = "empty";
+        int quantity = 0;
+
+        cout << "Название продукта: ";
+        cin >> name;
+
+        for (const auto& product : products) 
+        {
+            if (product.name == name) {
+
+                cout << "Кол-во продукта: ";
+                cin >> quantity;
+
+                if (product.price * quantity <= restaurant.getBalance()) {
+                    restaurant.withdraw(product.price * quantity);
+                    clearConsole();
+                    //логика добавления в request.Product_map заказа (ключ - product.id, значение - quantity)
+                    request.Product_map[product.id] = quantity;  // Добавляем заказ в Product_map
+                    cout << "Заказ на " << product.name << " оформлен\nБаланс: " << restaurant.getBalance();
+                }
+                else {
+                    clearConsole();
+                    cout << "Недостаточно средств";
+                }
+            }
+            else {
+                cout << "Продукт не найден" << endl;
+                cin >> name;
+                //createProductRequest(restaurant);
+            }
+        }
 
         return request;
     }
@@ -623,14 +661,9 @@ public:
     }
 };
 
-//метод для очистки консоли
-void clearConsole() {
-    system("cls");
-}
-
 //метод для работы с гостем
-int Guest(bool isLogin, Menu menu, Restaurant restaurant) {
-    isLogin = true; //переменная для определения статуса пользователя и управления циклом
+int Guest(Menu menu, Restaurant restaurant) {
+    //isLogin = true; //переменная для определения статуса пользователя и управления циклом
     char answer; //ответ гостя по заказа (да/нет)
     char action; //действие гостя (просмотр статуса или смена роли)
     int status = 0; //статус заказа
@@ -743,8 +776,8 @@ int Admin_function(string& filename, string& fileDish, string& fileProd, vector<
             cout << "Пароль: ";
             cin >> password;
 
-            adm->addEmployee(role, surname, name, patronymic, username, password, filename, employees);
-            log.addEntry("Админ добавил сотрудника" + surname + " " + name);
+            adm->addEmployee(role, surname, name, patronymic, username, HF(password), filename, employees);
+            log.addEntry("Админ добавил сотрудника: " + surname + " " + name);
         }
         else if (action == 2) {
             adm->getDishes(dishs, fileDish);
@@ -804,7 +837,7 @@ int Admin_function(string& filename, string& fileDish, string& fileProd, vector<
             cout << "Новый пароль: " << endl;
             cin >> password;
 
-            adm->editEmployee(username, role, surname, password, filename, employees);
+            adm->editEmployee(username, role, surname, HF(password), filename, employees);
             log.addEntry("Админ изменил сотрудника: " + surname);
         }
         else if (action == 6) {
@@ -860,7 +893,7 @@ vector<Employee> CheckEmplFile(char* documentsPath, string filename, vector<Empl
                     << admin.firstName << " "
                     << admin.patronymic << " "
                     << admin.username << " "
-                    << admin.password << " " << endl;
+                    << HF(admin.password) << " " << endl;
                 newFile.close();
                 cout << "Файл сотрудников создан." << endl;
                 employees.push_back(admin); //добавляем в лист сотрудников
@@ -1019,20 +1052,62 @@ void CheckLogsFile(char* documentsPath, string filename, AuditLog log) {
     }
 }
 
-int main()
-{
-    bool isLogin = false;
-    setlocale(LC_ALL, "Russian");
+int checkRole(string role) {
+    map<int, string> roles_map;
 
-    int role;
+    roles_map.emplace(1, "Admin");
+    roles_map.emplace(2, "Sklad");
+    roles_map.emplace(3, "Seller");
+    roles_map.emplace(4, "Buhgalter");
+    roles_map.emplace(5, "Povar");
+    roles_map.emplace(6, "Waiter");
+
+    for (const auto& pair : roles_map) {
+        if (pair.second == role) {
+            return pair.first;  //возвращаем ключ, если значение совпадает
+        }
+    }
+
+    return 0; //возвращаем 0, если роль не найдена
+}
+
+string Authorization(vector<Employee> employees, string& string_role) {
+    clearConsole();
+
     string login;
     string password;
+
+    cout << "Добро пожаловать в ресторан" << endl;
+    cout << "Ваш логин: ";
+    cin >> login;
+
+    if (login == "guest") return "guest";
+    else
+    {
+        cout << "Ваш пароль: ";
+        cin >> password;
+        string hashPass = HF(password);
+        
+        for (const auto& employee : employees) {
+            if (employee.username == login && employee.password == hashPass) {
+                string_role = employee.role;
+                return "employee";
+            }
+        }
+    }
+}
+
+int main()
+{
+    //bool isLogin = false;
+    setlocale(LC_ALL, "Russian");
 
     Restaurant restaurant{1000000};
 
     vector<Employee> employees;
     vector<Dish> dishs;
     vector<Product> products;
+    string string_role = "";
 
     // Получение пути до папки "Документы" в Windows
     char* documentsPath;
@@ -1058,41 +1133,30 @@ int main()
 
     Menu menu(dishs);
 
-    while (!isLogin) {
-        clearConsole();
-
-        cout << "Добро пожаловать в ресторан" << endl;
-        cout << "Ваш логин: ";
-        cin >> login;
-        cout << "Ваш пароль: ";
-        cin >> password;
-
-        if (login == "guest" && password == "guest") {
-            Guest(isLogin, menu, restaurant);
-            main();
+    while (true) {
+        if (Authorization(employees, string_role) == "guest") {
+            Guest(menu, restaurant);
+            Authorization(employees, string_role);
         }
         else {
-            for (const auto& employee : employees) {
-                if (employee.username == login && employee.password == password) {
-                    cout << "Ваша роль: \n1 - admin\n2 - sklad\n3 - povar\n4 - buhgalter\n5 - waiter\n6 - seller" << endl;
-                    cin >> role;
+            int role = checkRole(string_role);
 
-                    switch (role)
-                    {
-                    case 1:
-                        isLogin = true;
-                        Admin_function(filePath, fileDish, fileProd, employees, dishs, products, log);
-                        main();
-                        break;
-                    default:
-                        cout << "Роль не найдена" << endl;
-                        break;
-                    }
-                }
+            switch (role)
+            {
+            case 1:
+                Admin_function(filePath, fileDish, fileProd, employees, dishs, products, log);
+                Authorization(employees, string_role);
+                break;
+            case 2:
+                //Admin_function(filePath, fileDish, fileProd, employees, dishs, products, log);
+                Authorization(employees, string_role);
+                break;
+            default:
+                cout << "Роль не найдена" << endl;
+                break;
             }
         }
     }
 
     return 0;
 }
-
