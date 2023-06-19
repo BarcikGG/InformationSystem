@@ -341,33 +341,48 @@ public:
         }
     }
 
-    //void addDish(vector<Dish>& dishes, Dish dish, string filename) {
-    //    
-    //    dishes.push_back(dish);
+    //метод добавления блюд в вектор, сохранения их в файл и сохранения файла рецептов
+    void addDish(vector<Dish>& dishs, Dish& dish, map<int, vector<string>>& Craft_map,string fileCraft, string filename) {
+        
+        dishs.push_back(dish);
 
-    //    ofstream outputFile(filename);
-    //    if (outputFile.is_open()) {
-    //        for (const auto& dish : dishes) {
-    //            outputFile << dish.id << " "
-    //                << dish.name << " ";
-    //                
-    //                // Записываем вектор craft в файл
-    //                for (const auto& ingredient : dish.craft) {
-    //                    outputFile << ingredient << " ";
-    //                }
+        ofstream outputFile(filename);
+        if (outputFile.is_open()) {
+            for (const auto& dish : dishs) {
+                outputFile << dish.id << " "
+                    << dish.name << " "
+                    << dish.craft << " "
+                    << dish.time << " "
+                    << dish.price << " "
+                    << dish.quantity << endl;
+            }
+            outputFile.close();
+            cout << "Блюдо успешно добавлено и сохранено в файл." << endl;
+        }
+        else {
+            cout << "Не удалось открыть файл блюд для записи." << endl;
+        }
+        
+        //добавление рецепта в файл рецептов
+        ofstream outputFileCraft(fileCraft); // Открываем файл
+        if (outputFileCraft.is_open()) {
+            for (const auto& pair : Craft_map) {
+                outputFileCraft << pair.first << " "; // Записываем ключ (число) в файл
 
-    //                outputFile << dish.time << " "
-    //                << dish.price << " "
-    //                << dish.quantity << endl;
-    //        }
-    //        outputFile.close();
-    //        cout << "Блюдо успешно добавлено и сохранено в файл." << endl;
+                for (const auto& word : pair.second) {
+                    outputFileCraft << word << " "; // Записываем каждое слово из вектора в файл
+                }
 
-    //    }
-    //    else {
-    //        cout << "Не удалось открыть файл блюд для записи." << endl;
-    //    }
-    //}
+                outputFileCraft << endl;
+            }
+
+            outputFileCraft.close();
+            cout << "Данные успешно записаны в файл." << endl;
+        }
+        else {
+            cout << "Не удалось открыть файл для записи." << endl;
+        }
+    }
 
     //void editDish(int dishId, string newName, int newPrice, vector<string> newCraft, vector<Dish> dishes, string filename) {
     //    bool found = false;
@@ -410,23 +425,59 @@ public:
     //    }
     //}
 
-    void getDishes(vector<Dish> dishs, string filename, map<int, vector<string>> Craft_map) {
-        ifstream inputFile(filename);
-        if (inputFile.is_open()) {
-            string line;
-            while (getline(inputFile, line)) {
-                stringstream ss(line);
-
-                string id, name, id_craft, time, price, quantity;
-                if (ss >> id >> name >> id_craft >> time >> price >> quantity) {
-                    dishs.push_back({ stoi(id), name, stoi(id_craft), stoi(time), stoi(price), stoi(quantity)});
-                }
+    void editDish(vector<Dish>& dishs, Dish& dish, map<int, vector<string>>& Craft_map, string fileCraft, string filename) {
+        // Изменяем блюдо в векторе dishs
+        for (auto& d : dishs) {
+            if (d.id == dish.id) {
+                d.name = dish.name;
+                d.craft = dish.craft;
+                d.time = dish.time;
+                d.price = dish.price;
+                d.quantity = dish.quantity;
+                break;
             }
-            inputFile.close();
+        }
+
+        // Сохраняем изменения в файл блюд
+        ofstream outputFile(filename);
+        if (outputFile.is_open()) {
+            for (const auto& d : dishs) {
+                outputFile << d.id << " "
+                    << d.name << " "
+                    << d.craft << " "
+                    << d.time << " "
+                    << d.price << " "
+                    << d.quantity << endl;
+            }
+            outputFile.close();
+            cout << "Блюдо успешно изменено и сохранено в файл." << endl;
         }
         else {
-            cout << "Не удалось открыть файл блюд для чтения." << endl;
+            cout << "Не удалось открыть файл блюд для записи." << endl;
         }
+
+        // Сохраняем изменения в файл рецептов
+        ofstream outputFileCraft(fileCraft);
+        if (outputFileCraft.is_open()) {
+            for (const auto& pair : Craft_map) {
+                outputFileCraft << pair.first << " ";
+
+                for (const auto& word : pair.second) {
+                    outputFileCraft << word << " ";
+                }
+
+                outputFileCraft << endl;
+            }
+
+            outputFileCraft.close();
+            cout << "Рецепт успешно изменен и сохранен в файл." << endl;
+        }
+        else {
+            cout << "Не удалось открыть файл рецептов для записи." << endl;
+        }
+    }
+
+    void getDishes(vector<Dish>& dishs, string filename, map<int, vector<string>> Craft_map) {
 
         for (const auto& dish : dishs) {
             string ings;
@@ -447,7 +498,7 @@ public:
         }
     }
 
-    void addProduct(int id, string name, int price, vector<Product> products, string filename) {
+    void addProduct(int& id, string& name, int& price, vector<Product>& products, string filename) {
         Product product{ id, name, price };
 
         ofstream outputFile(filename);
@@ -469,15 +520,15 @@ public:
         }
     }
 
-    void editProduct(string name, int newId, int newPrice, vector<Product> products, string fileProd) {
+    void editProduct(Product& product, vector<Product>& products, string fileProd) {
         bool found = false;
 
         // Найти продукт по ID
-        for (auto& product : products) {
-            if (product.name == name) {
+        for (auto& p : products) {
+            if (p.name == product.name) {
                 //обновляем id и цену продукта
-                product.id = newId;
-                product.price = newPrice;
+                p.id = product.id;
+                p.price = product.price;
                 found = true;
                 break;
             }
@@ -503,7 +554,38 @@ public:
             }
         }
         else {
-            cout << "Продукт с названием: " << name << " не найден." << endl;
+            cout << "Продукт с названием: " << product.name << " не найден." << endl;
+        }
+    }
+
+    void removeProduct(int& id, vector<Product>& products, string filename) {
+        // Удаляем продукт из вектора products
+        for (auto check = products.begin(); check != products.end(); ) //проходимся по всему вектору.
+        {
+            if (check->id == id) { //сверяем найденный id с переданным id продукта.
+                products.erase(check); //удаляем продукт
+                break;
+            }
+            else {
+                check++;
+            }
+        }
+
+        // Сохраняем изменения в файл
+        ofstream outputFile(filename);
+        if (outputFile.is_open()) {
+            for (const auto& product : products) {
+                outputFile
+                    << product.id << " "
+                    << product.name << " "
+                    << product.price << " " << endl;
+            }
+
+            outputFile.close();
+            cout << "Продукт успешно удален и изменения сохранены в файл." << endl;
+        }
+        else {
+            cerr << "Не удалось открыть файл продуктов для записи." << endl;
         }
     }
 
@@ -775,7 +857,7 @@ int Guest(Menu menu, Restaurant restaurant) {
     return 0;
 }
 
-void Admin_function(string& filename, string& fileDish, string& fileProd, map<int, vector<string>> Craft_map, vector<Employee>& employees, vector<Dish>& dishs, vector<Product>& products, AuditLog log)
+void Admin_function(string& filename, string& fileCraft, string& fileDish, string& fileProd, map<int, vector<string>> Craft_map, vector<Employee>& employees, vector<Dish>& dishs, vector<Product>& products, AuditLog& log)
 {
     int action;
     unique_ptr<SystemAdministrator> adm = make_unique<SystemAdministrator>();
@@ -794,7 +876,8 @@ void Admin_function(string& filename, string& fileDish, string& fileProd, map<in
     do {
         clearConsole();
         cout << "1 - Добавить сотрудника\n2 - Добавить блюдо\n3 - Добавить продукт" <<
-            "\n5 - Изменить сотрудника\n6 - Изменить блюдо\n7 - Изменить продукт\n4 - Логи\n0 - Выход" << endl;
+            "\n5 - Изменить сотрудника\n6 - Изменить блюдо\n7 - Изменить продукт" <<
+            "\n8 - удалить продукт\n4 - Логи\n0 - Выход" << endl;
         cin >> action;
 
         if (action == 1) {
@@ -816,12 +899,12 @@ void Admin_function(string& filename, string& fileDish, string& fileProd, map<in
             log.addEntry("Админ добавил сотрудника: " + surname + " " + name);
         }
         else if (action == 2) {
-            //int id_craft;
             adm->getDishes(dishs, fileDish, Craft_map);
             cout << "Id: ";
             cin >> id;
             cout << "Название: ";
-            cin >> name;
+            cin.ignore();
+            getline(cin, name);
             cout << "Цена: ";
             cin >> price;
             cout << "Время готовки: ";
@@ -843,7 +926,7 @@ void Admin_function(string& filename, string& fileDish, string& fileProd, map<in
             Craft_map[id] = craft;
 
             Dish new_dish{ id, name, id, time, price, quantity };
-            //adm->addDish(dishs, new_dish, fileDish);
+            adm->addDish(dishs, new_dish, Craft_map, fileCraft, fileDish);
             log.addEntry("Админ добавил пункт меню: " + name);
         }
         else if (action == 3) {
@@ -887,6 +970,10 @@ void Admin_function(string& filename, string& fileDish, string& fileProd, map<in
             cin >> name;
             cout << "Новая цена: " << endl;
             cin >> price;
+            cout << "Новое время: " << endl;
+            cin >> time;
+            cout << "Новое кол-во: " << endl;
+            cin >> quantity;
 
             adm->getProducts(products, fileProd);
             cout << "Новый рецепт: ";
@@ -900,7 +987,10 @@ void Admin_function(string& filename, string& fileDish, string& fileProd, map<in
                 newCraft.push_back(word);
             }
 
-            //adm->editDish(id, name, price, newCraft, dishs, fileDish);
+            Craft_map[id] = newCraft;
+
+            Dish editedDish = {id, name, id, time, price, quantity};
+            adm->editDish(dishs, editedDish, Craft_map, fileCraft, fileDish);
             log.addEntry("Админ изменил блюдо: " + name);
         }
         else if (action == 7) {
@@ -913,8 +1003,22 @@ void Admin_function(string& filename, string& fileDish, string& fileProd, map<in
             cout << "Новая цена: " << endl;
             cin >> newPrice;
 
-            adm->editProduct(name, id, newPrice, products, fileProd);
+            Product editedProd = {id, name, newPrice};
+            adm->editProduct(editedProd, products, fileProd);
             log.addEntry("Админ изменил продукт: " + name);
+        }
+        else if (action == 8) {
+            string prodName;
+            adm->getProducts(products, fileProd);
+            cout << "ID продукта: ";
+            cin >> id;
+
+            for (const auto& prod : products) {
+                if (prod.id == id) prodName = prod.name;
+            }
+
+            adm->removeProduct(id, products, fileProd);
+            log.addEntry("Админ удалил продукт: " + prodName);
         }
 
     } while (action != 0);
@@ -968,12 +1072,17 @@ vector<Employee> CheckEmplFile(char* documentsPath, string filename, vector<Empl
 void ReadCraft(const string& filename, map<int, vector<string>>& craft_map) {
     ifstream inputFile(filename);
     if (inputFile.is_open()) {
-        int number;
-        string word;
-        while (inputFile >> number) { // Считываем число из файла
+        string line;
+        while (getline(inputFile, line)) {
+            stringstream ss(line);
+
+            int number;
+            ss >> number; // Считываем число из строки
+
+            string word;
             vector<string> words;
 
-            while (inputFile >> word) { // Считываем каждое слово из файла
+            while (ss >> word) { // Считываем каждое слово из строки
                 words.push_back(word);
             }
 
@@ -986,7 +1095,6 @@ void ReadCraft(const string& filename, map<int, vector<string>>& craft_map) {
     else {
         cout << "Не удалось открыть файл для чтения." << endl;
     }
-
 }
 
 void CheckDishsFile(char* documentsPath, string filename, string fileCraft, map<int, vector<string>>& craft_map, vector<Dish>& dishs) {
@@ -1004,10 +1112,8 @@ void CheckDishsFile(char* documentsPath, string filename, string fileCraft, map<
                     stringstream ss(line);
 
                     string id, name, id_craft, time, price, quantity;
-                    if (ss >> id >> name) {
-                        if (ss >> id >> name >> id_craft >> time >> price >> quantity) {
-                            dishs.push_back({ stoi(id), name, stoi(id_craft), stoi(time), stoi(price), stoi(quantity)});
-                        }
+                    if (ss >> id >> name >> id_craft >> time >> price >> quantity) {
+                        dishs.push_back({ stoi(id), name, stoi(id_craft), stoi(time), stoi(price), stoi(quantity)});
                     }
                 }
                 inputFile.close();
@@ -1087,9 +1193,9 @@ vector<Product> CheckProductsFile(char* documentsPath, string filename, vector<P
             // Создание файла
             ofstream newFile(filename);
 
-            products.push_back({ 1, "meat", 450});
-            products.push_back({ 2, "ris", 50});
-            products.push_back({ 3, "tomato", 180});
+            products.push_back({ 1, "Meat", 450});
+            products.push_back({ 2, "Ris", 50});
+            products.push_back({ 3, "Tomato", 180});
 
             if (newFile.is_open()) {
                 for (const auto& product : products) {
@@ -1211,7 +1317,7 @@ int main()
     size_t len;
     _dupenv_s(&documentsPath, &len, "USERPROFILE");
     string filePath = documentsPath;
-    
+
     filePath += "\\Documents\\employees.txt"; //добавляем к пути файл с сотрудниками
     CheckEmplFile(documentsPath, filePath, employees);
 
@@ -1244,7 +1350,7 @@ int main()
             switch (role)
             {
             case 1:
-                Admin_function(filePath, fileDish, fileProd, Dish_craft, employees, dishs, products, log);
+                Admin_function(filePath, fileCraft, fileDish, fileProd, Dish_craft, employees, dishs, products, log);
                 Authorization(employees, string_role);
                 break;
             case 2:
