@@ -669,8 +669,27 @@ public:
     int amount = 0;
     int amount_buy = 0;
 
-    void getStore(vector<Product> products, ProductStoreMap& product_map)
+    void getStore(vector<Product> products, string& fileStore)
     {
+        ProductStoreMap product_map;
+        ifstream file(fileStore);
+        if (file.good()) {
+            // выгрузка продуктов склада из файла в вектор
+            ifstream inputFile(fileStore);
+            if (inputFile.is_open()) {
+                string line;
+                while (getline(inputFile, line)) {
+                    stringstream ss(line);
+
+                    string id, quantity;
+                    if (ss >> id >> quantity) {
+                        product_map.ProductStore_map[stoi(id)] = { stoi(quantity) };
+                    }
+                }
+                inputFile.close();
+            }
+        }
+
         for (const auto& pair : product_map.ProductStore_map) {
             int productId = pair.first;
             int quantity = pair.second;
@@ -706,8 +725,8 @@ public:
     }
 
 
-    void createProductRequest(vector<Product>& products, ProductStoreMap& productStoreMap, ProductRequest& request, Restaurant& restaurant, AuditLog& log, string& fileRequest) {
-        getStore(products, productStoreMap);
+    void createProductRequest(vector<Product>& products, string& fileStore, ProductRequest& request, Restaurant& restaurant, AuditLog& log, string& fileRequest) {
+        getStore(products, fileStore);
         string name;
         int quantity;
         amount = restaurant.getBalance();
@@ -729,7 +748,7 @@ public:
                             clearConsole();
                             //логика добавления в request.Product_map заказа (ключ - product.id, значение - quantity)
                             request.Product_map[product.id] = quantity;  // Добавляем заказ в Product_map
-                            cout << "Заказ на " << product.name << " оформлен\nБаланс: " << amount;
+                            cout << "Заказ на " << product.name << " оформлен\nБаланс: " << amount << endl;
                             log.addEntry("Складовщик сделал заявку на закуп: " + product.name);
                             addToProductMapFile(fileRequest, request.Product_map);
                         }
@@ -750,7 +769,7 @@ public:
     string answer;
     int amount = 0;
 
-    void SendProducts(ProductRequest& request, vector<Product>& products, Restaurant& restaurant, string& fileSent, ProductStoreMap& product_map) {
+    void SendProducts(ProductStoreMap& productStore, ProductRequest& request, vector<Product>& products, Restaurant& restaurant, string& fileSent, string& fileStore, ProductStoreMap& product_map) {
         clearConsole();
         cout << "Ресторан заказывает: " << endl;
 
@@ -793,6 +812,18 @@ public:
             }
             else {
                 cout << "Не удалось открыть файл для записи" << endl;
+            }
+
+            ofstream outputFileProd(fileStore);  //открываем файл (store)
+            if (outputFileProd.is_open()) {
+                for (const auto& pair : productStore.ProductStore_map) {
+                    outputFileProd << pair.first << " " << pair.second << endl;  // Записываем каждую пару Product_map в файл
+
+                    int previous = productStore.ProductStore_map[pair.first];
+                    productStore.ProductStore_map[pair.first] = { previous + pair.second };
+                }
+
+                outputFileProd.close();
             }
         }
 
@@ -852,8 +883,47 @@ public:
         cout << "Всего заказано на: " << allOrdersAmount << endl;
     }
 
-    void viewAllSends(string& fileSent) {
-        // Логика просмотра всех принятых поставок продуктов
+    void viewAllSends(string& fileSent, ProductRequest request, vector<Product>& products) {
+        clearConsole();
+
+        ifstream file(fileSent);
+        if (file.good()) {
+            cout << "Файл продуктов на складе существует." << endl;
+
+            // выгрузка блюд из файла в вектор
+            ifstream inputFile(fileSent);
+            if (inputFile.is_open()) {
+                string line;
+                while (getline(inputFile, line)) {
+                    stringstream ss(line);
+
+                    string id, quantity;
+                    if (ss >> id >> quantity) {
+                        request.Product_map[stoi(id)] = { stoi(quantity) };
+                    }
+                }
+                inputFile.close();
+            }
+        }
+
+        cout << "Все заказы продуктов: " << endl;
+
+        //циклом проходимся по копии map заказов
+        for (const auto& pair : request.Product_map) {
+            int productId = pair.first;
+            int quantity = pair.second;
+
+            //поиск продукта по ID
+            const auto& prod = find_if(products.begin(), products.end(), [productId](const Product& product) {
+                return product.id == productId; //возвращает итератор, указывающий на найденный продукт или на конец вектора, если продукт не найден
+                });
+
+            // Проверка, найден ли продукт
+            if (prod != products.end()) {
+                const Product& product = *prod; //создаем объект продукта и передаем в него значение объекта
+                cout << "Продукт: " << product.name << ", кол-во: " << quantity << endl;
+            }
+        }
     }
 
     void viewFinReports(Restaurant& res) {
@@ -1169,7 +1239,7 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
 
 }
 
-void StoreKeeper_function(vector<Product>& products, ProductStoreMap& productStoreMap, ProductRequest& request, Restaurant& restaurant, AuditLog& log, string fileRequest) 
+void StoreKeeper_function(vector<Product>& products, string& fileStore, ProductRequest& request, Restaurant& restaurant, AuditLog& log, string fileRequest) 
 {
     unique_ptr<Storekeeper> sklad = make_unique<Storekeeper>();
     int action;
@@ -1185,14 +1255,14 @@ void StoreKeeper_function(vector<Product>& products, ProductStoreMap& productSto
 
             if (action == 1)
             {
-                sklad->getStore(products, productStoreMap);
+                sklad->getStore(products, fileStore);
                 cout << "\ne - для выхода" << endl;
                 cin >> empty;
 
             }
             else if (action == 2)
             {
-                sklad->createProductRequest(products, productStoreMap, request, restaurant, log, fileRequest);
+                sklad->createProductRequest(products, fileStore, request, restaurant, log, fileRequest);
                 cout << "\ne - для выхода" << endl;
                 cin >> empty;
             }
@@ -1202,7 +1272,7 @@ void StoreKeeper_function(vector<Product>& products, ProductStoreMap& productSto
     } while (action != 0);
 }
 
-void Accountant_function(string& fileProdBuys, ProductRequest request, vector<Product>& products, Restaurant restaurant) 
+void Accountant_function(string& fileSells, string& fileProdBuys, ProductRequest request, vector<Product>& products, Restaurant restaurant) 
 {
     unique_ptr<Accountant> acc = make_unique<Accountant>();
     int action;
@@ -1224,7 +1294,7 @@ void Accountant_function(string& fileProdBuys, ProductRequest request, vector<Pr
             }
             else if (action == 2)
             {
-                //acc->viewAllSends();
+                acc->viewAllSends(fileSells, request, products);
                 cout << "\ne - для выхода" << endl;
                 cin >> empty;
             }
@@ -1616,15 +1686,15 @@ int main()
                 Authorization(employees, string_role);
                 break;
             case 2:
-                StoreKeeper_function(products, productStore, request, restaurant, log, fileRequest);
+                StoreKeeper_function(products, fileStore, request, restaurant, log, fileRequest);
                 Authorization(employees, string_role);
                 break;
             case 3:
-                seller.SendProducts(request, products, restaurant, fileSent, productStore);
+                seller.SendProducts(productStore, request, products, restaurant, fileSent, fileStore, productStore);
                 Authorization(employees, string_role);
                 break;
             case 4:
-                Accountant_function(fileRequest, request, products, restaurant);
+                Accountant_function(fileSent, fileRequest, request, products, restaurant);
                 Authorization(employees, string_role);
                 break;
             default:
