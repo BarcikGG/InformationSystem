@@ -664,6 +664,8 @@ public:
 // Класс складского
 class Storekeeper {
 public:
+    int amount = 0;
+    int amount_buy = 0;
 
     void getStore(vector<Product> products, ProductStoreMap& product_map)
     {
@@ -684,10 +686,29 @@ public:
         }
     }
 
-    void createProductRequest(vector<Product>& products, ProductStoreMap& productStoreMap, ProductRequest& request, Restaurant& restaurant, AuditLog& log) {
+    //метод добавления заявки в файл
+    void addToProductMapFile(string& fileRequest, map<int, int>& productMap) {
+        ofstream outputFile(fileRequest, ios::app);  //открываем файл в режиме дополнения
+
+        if (outputFile.is_open()) {
+            for (const auto& pair : productMap) {
+                outputFile << pair.first << " " << pair.second << endl;  // Записываем каждую пару Product_map в файл
+            }
+
+            outputFile.close();
+            cout << "Новая пара Product_map успешно добавлена в файл" << endl;
+        }
+        else {
+            cout << "Не удалось открыть файл для записи" << endl;
+        }
+    }
+
+
+    void createProductRequest(vector<Product>& products, ProductStoreMap& productStoreMap, ProductRequest& request, Restaurant& restaurant, AuditLog& log, string& fileRequest) {
         getStore(products, productStoreMap);
         string name;
         int quantity;
+        amount = restaurant.getBalance();
 
         cout << "Название продукта: ";
         cin >> name;
@@ -701,12 +722,14 @@ public:
                     cin >> quantity;
                     
                     if (quantity > 0) {
-                        if (product.price * quantity <= restaurant.getBalance()) {
+                        amount_buy += product.price * quantity;
+                        if (amount_buy <= amount) {
                             clearConsole();
                             //логика добавления в request.Product_map заказа (ключ - product.id, значение - quantity)
                             request.Product_map[product.id] = quantity;  // Добавляем заказ в Product_map
-                            cout << "Заказ на " << product.name << " оформлен\nБаланс: " << restaurant.getBalance();
+                            cout << "Заказ на " << product.name << " оформлен\nБаланс: " << amount;
                             log.addEntry("Складовщик сделал заявку на закуп: " + product.name);
+                            addToProductMapFile(fileRequest, request.Product_map);
                         }
                         else {
                             clearConsole();
@@ -720,10 +743,56 @@ public:
 };
 
 // Класс поставщика
-class Supplier {
+class Seller {
 public:
-    void processDishRequest(const ProductRequest& request, Menu& menu) {
-        // Логика обработки заявки на продукты и отправки продуктов
+    string answer;
+    int amount = 0;
+
+    void SendProducts(ProductRequest& request, vector<Product>& products, Restaurant& restaurant, string& fileSent, map<int, int>& products_map) {
+        clearConsole();
+        cout << "Ресторан заказывает: " << endl;
+
+        for (const auto& pair : request.Product_map) {
+            int productId = pair.first;
+            int quantity = pair.second;
+
+            //поиск продукта по ID
+            const auto& prod = find_if(products.begin(), products.end(), [productId](const Product& product) {
+                return product.id == productId; //возвращает итератор, указывающий на найденный продукт или на конец вектора, если продукт не найден
+                });
+
+            // Проверка, найден ли продукт
+            if (prod != products.end()) {
+                const Product& product = *prod; //создаем объект продукта и передаем в него значение объекта
+                cout << "Продукт: " << product.name << ", кол-во: " << quantity << endl;
+                amount += product.price * quantity;
+            }
+        }
+
+        cout << "Подтверждаем отправку? y/n: ";
+        cin >> answer;
+
+        if (answer == "y")
+        {
+            restaurant.withdraw(amount);
+            cout << "\nОплата прошла успешна" << endl;
+
+            ofstream outputFile(fileSent, ios::app);  //открываем файл в режиме дополнения
+            if (outputFile.is_open()) {
+                for (const auto& pair : request.Product_map) {
+                    outputFile << pair.first << " " << pair.second << endl;  // Записываем каждую пару Product_map в файл
+                    
+                    products_map[pair.first] = {pair.second};
+                }
+
+                outputFile.close();
+                cout << "Новая пара Product_map успешно добавлена в файл" << endl;
+            }
+            else {
+                cout << "Не удалось открыть файл для записи" << endl;
+            }
+        }
+
     }
 };
 
@@ -1030,7 +1099,7 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
 
 }
 
-void StoreKeeper_function(vector<Product>& products, ProductStoreMap& productStoreMap, ProductRequest& request, Restaurant& restaurant, AuditLog& log) 
+void StoreKeeper_function(vector<Product>& products, ProductStoreMap& productStoreMap, ProductRequest& request, Restaurant& restaurant, AuditLog& log, string fileRequest) 
 {
     unique_ptr<Storekeeper> sklad = make_unique<Storekeeper>();
     int action;
@@ -1053,7 +1122,7 @@ void StoreKeeper_function(vector<Product>& products, ProductStoreMap& productSto
             }
             else if (action == 2)
             {
-                sklad->createProductRequest(products, productStoreMap, request, restaurant, log);
+                sklad->createProductRequest(products, productStoreMap, request, restaurant, log, fileRequest);
                 cout << "\ne - для выхода" << endl;
                 cin >> empty;
             }
@@ -1338,6 +1407,7 @@ int main()
     setlocale(LC_ALL, "Russian");
 
     Restaurant restaurant{1000000};
+    Seller seller;
     ProductRequest request;
     ProductStoreMap productStore;
 
@@ -1372,6 +1442,12 @@ int main()
     AuditLog log(fileLog);
     CheckLogsFile(documentsPath, fileLog, log);
 
+    string fileRequest = documentsPath; //полный путь к файлу логов
+    fileRequest += "\\Documents\\product_buy.txt"; //добавляем к пути файл с логами
+
+    string fileSent = documentsPath; //полный путь к файлу логов
+    fileSent += "\\Documents\\product_sent.txt"; //добавляем к пути файл с логами
+
     Menu menu(dishs);
 
     while (true) {
@@ -1390,7 +1466,11 @@ int main()
                 Authorization(employees, string_role);
                 break;
             case 2:
-                StoreKeeper_function(products, productStore, request, restaurant, log);
+                StoreKeeper_function(products, productStore, request, restaurant, log, fileRequest);
+                Authorization(employees, string_role);
+                break;
+            case 3:
+                seller.SendProducts(request, products, restaurant, fileSent);
                 Authorization(employees, string_role);
                 break;
             default:
