@@ -42,12 +42,14 @@ public:
 
 class ProductRequest {
 public:
-    map<int, int> Product_map; // Ключ - идентификатор продукта, Значение - количество продукта
+    // Ключ - идентификатор продукта, Значение - количество продукта
+    map<int, int> Product_map; 
 };
 
 class ProductStoreMap {
 public:
-    map<int, int> ProductStore_map; // Ключ - идентификатор продукта, Значение - количество продукта
+    // Ключ - идентификатор продукта, Значение - количество продукта
+    map<int, int> ProductStore_map; 
 };
 
 // Класс ресторан
@@ -748,7 +750,7 @@ public:
     string answer;
     int amount = 0;
 
-    void SendProducts(ProductRequest& request, vector<Product>& products, Restaurant& restaurant, string& fileSent, map<int, int>& products_map) {
+    void SendProducts(ProductRequest& request, vector<Product>& products, Restaurant& restaurant, string& fileSent, ProductStoreMap& product_map) {
         clearConsole();
         cout << "Ресторан заказывает: " << endl;
 
@@ -782,7 +784,8 @@ public:
                 for (const auto& pair : request.Product_map) {
                     outputFile << pair.first << " " << pair.second << endl;  // Записываем каждую пару Product_map в файл
                     
-                    products_map[pair.first] = {pair.second};
+                    int previous = product_map.ProductStore_map[pair.first];
+                    product_map.ProductStore_map[pair.first] = {previous + pair.second};
                 }
 
                 outputFile.close();
@@ -931,7 +934,7 @@ int Guest(Menu menu, Restaurant restaurant) {
     return 0;
 }
 
-void Admin_function(string& filename, string& fileCraft, string& fileDish, string& fileProd, map<int, vector<string>> Craft_map, vector<Employee>& employees, vector<Dish>& dishs, vector<Product>& products, AuditLog& log)
+void Admin_function(string& filename, string& fileCraft, string& fileDish, string& fileProd, map<int, vector<string>> Craft_map, vector<Employee>& employees, vector<Dish>& dishs, vector<Product>& products, AuditLog& log, ProductStoreMap& storeMap)
 {
     int action;
     unique_ptr<SystemAdministrator> adm = make_unique<SystemAdministrator>();
@@ -1013,6 +1016,7 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
             cin >> price;
 
             adm->addProduct(id, name, price, products, fileProd);
+            storeMap.ProductStore_map[id] = { 1 };
             log.addEntry("Админ добавил продукт: " + name);
         }
         else if (action == 4) {
@@ -1355,6 +1359,47 @@ void CheckLogsFile(char* documentsPath, string filename, AuditLog& log) {
     }
 }
 
+void CheckProductsStoreFile(char* documentsPath, string filename, ProductStoreMap& storeMap) {
+    if (documentsPath != nullptr) {
+        // Проверка существования файла блюд
+        ifstream file(filename);
+        if (file.good()) {
+            cout << "Файл продуктов на складе существует." << endl;
+
+            // выгрузка блюд из файла в вектор
+            ifstream inputFile(filename);
+            if (inputFile.is_open()) {
+                string line;
+                while (getline(inputFile, line)) {
+                    stringstream ss(line);
+
+                    string id, quantity;
+                    if (ss >> id >> quantity) {
+                        storeMap.ProductStore_map[stoi(id)] = { stoi(quantity) };
+                    }
+                }
+                inputFile.close();
+            }
+        }
+        else {
+            // Создание файла
+            ofstream newFile(filename);
+
+            storeMap.ProductStore_map[1] = {1};
+            storeMap.ProductStore_map[2] = {1};
+            storeMap.ProductStore_map[3] = {1};
+
+            if (newFile.is_open()) {
+                for (const auto& product : storeMap.ProductStore_map) {
+                    newFile << product.first << " " << product.second << endl;
+                }
+                newFile.close();
+                cout << "Файл продуктов создан." << endl;
+            }
+        }
+    }
+}
+
 int checkRole(string role) {
     map<int, string> roles_map;
 
@@ -1442,11 +1487,15 @@ int main()
     AuditLog log(fileLog);
     CheckLogsFile(documentsPath, fileLog, log);
 
-    string fileRequest = documentsPath; //полный путь к файлу логов
-    fileRequest += "\\Documents\\product_buy.txt"; //добавляем к пути файл с логами
+    string fileRequest = documentsPath; //полный путь к файлу заявок
+    fileRequest += "\\Documents\\product_buy.txt"; //добавляем к пути файл с заявками
 
-    string fileSent = documentsPath; //полный путь к файлу логов
-    fileSent += "\\Documents\\product_sent.txt"; //добавляем к пути файл с логами
+    string fileSent = documentsPath; //полный путь к файлу отправленных продуктов
+    fileSent += "\\Documents\\product_sent.txt"; //добавляем к пути файл с отправленными продуктами
+
+    string fileStore = documentsPath; //полный путь к файлу склада
+    fileStore += "\\Documents\\store.txt"; //добавляем к пути файл склада
+    CheckProductsStoreFile(documentsPath, fileStore, productStore);
 
     Menu menu(dishs);
 
@@ -1462,7 +1511,7 @@ int main()
             switch (role)
             {
             case 1:
-                Admin_function(filePath, fileCraft, fileDish, fileProd, Dish_craft, employees, dishs, products, log);
+                Admin_function(filePath, fileCraft, fileDish, fileProd, Dish_craft, employees, dishs, products, log, productStore);
                 Authorization(employees, string_role);
                 break;
             case 2:
@@ -1470,7 +1519,7 @@ int main()
                 Authorization(employees, string_role);
                 break;
             case 3:
-                seller.SendProducts(request, products, restaurant, fileSent);
+                seller.SendProducts(request, products, restaurant, fileSent, productStore);
                 Authorization(employees, string_role);
                 break;
             default:
