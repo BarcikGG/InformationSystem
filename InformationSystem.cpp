@@ -1683,19 +1683,15 @@ int main()
             {
             case 1:
                 Admin_function(filePath, fileCraft, fileDish, fileProd, Dish_craft, employees, dishs, products, log, productStore);
-                Authorization(employees, string_role);
                 break;
             case 2:
                 StoreKeeper_function(products, fileStore, request, restaurant, log, fileRequest);
-                Authorization(employees, string_role);
                 break;
             case 3:
                 seller.SendProducts(productStore, request, products, restaurant, fileSent, fileStore, productStore);
-                Authorization(employees, string_role);
                 break;
             case 4:
                 Accountant_function(fileSent, fileRequest, request, products, restaurant);
-                Authorization(employees, string_role);
                 break;
             default:
                 cout << "Роль не найдена" << endl;
