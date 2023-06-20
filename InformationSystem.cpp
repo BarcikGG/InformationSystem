@@ -802,16 +802,82 @@ public:
 // Класс бухгалтера
 class Accountant {
 public:
-    void viewDishRequests(const vector<ProductRequest>& requests) {
-        // Логика просмотра всех отправленных заявок на продукты
+    string exit;
+    int allSellAmount = 0;
+    int allOrdersAmount = 0;
+
+    //вывод заказов за все время (получаем копию ProductRequest)
+    void viewAllRequests(string& fileProdBuy, ProductRequest request, vector<Product>& products) {
+        clearConsole();
+
+        ifstream file(fileProdBuy);
+        if (file.good()) {
+            cout << "Файл продуктов на складе существует." << endl;
+
+            // выгрузка блюд из файла в вектор
+            ifstream inputFile(fileProdBuy);
+            if (inputFile.is_open()) {
+                string line;
+                while (getline(inputFile, line)) {
+                    stringstream ss(line);
+
+                    string id, quantity;
+                    if (ss >> id >> quantity) {
+                        request.Product_map[stoi(id)] = { stoi(quantity) };
+                    }
+                }
+                inputFile.close();
+            }
+        }
+
+        cout << "Все заказы продуктов: " << endl;
+
+        //циклом проходимся по копии map заказов
+        for (const auto& pair : request.Product_map) {
+            int productId = pair.first;
+            int quantity = pair.second;
+
+            //поиск продукта по ID
+            const auto& prod = find_if(products.begin(), products.end(), [productId](const Product& product) {
+                return product.id == productId; //возвращает итератор, указывающий на найденный продукт или на конец вектора, если продукт не найден
+                });
+
+            // Проверка, найден ли продукт
+            if (prod != products.end()) {
+                const Product& product = *prod; //создаем объект продукта и передаем в него значение объекта
+                cout << "Продукт: " << product.name << ", кол-во: " << quantity << endl;
+                allOrdersAmount += product.price * quantity;
+            }
+        }
+        cout << "Всего заказано на: " << allOrdersAmount << endl;
     }
 
-    void viewDeliveries(const vector<ProductRequest>& deliveries) {
+    void viewAllSends(string& fileSent) {
         // Логика просмотра всех принятых поставок продуктов
     }
 
-    void viewFinancialReports() {
-        // Логика просмотра финансовой отчетности
+    void viewFinReports(Restaurant& res) {
+        int answer = 0;
+
+        cout << "1 - Баланс рестика\n2 - Отчет продаж\n3 - Общие продажи " << endl;
+        cin >> answer;
+
+        switch (answer)
+        {
+        case 1:
+            cout << "Баланс ресторана: " << res.getBalance() << endl;
+            cout << "e - exit: ";
+            cin >> exit;
+            break;
+        case 2:
+
+            break;
+        case 3:
+            break;
+        default:
+            cout << "Неверное число" << endl;
+            break;
+        }
     }
 };
 
@@ -1133,6 +1199,41 @@ void StoreKeeper_function(vector<Product>& products, ProductStoreMap& productSto
         }
         catch (exception ex) { cout << "Это не число" << endl; }
 
+    } while (action != 0);
+}
+
+void Accountant_function(string& fileProdBuys, ProductRequest request, vector<Product>& products, Restaurant restaurant) 
+{
+    unique_ptr<Accountant> acc = make_unique<Accountant>();
+    int action;
+    char empty;
+
+    do
+    {
+        clearConsole();
+        cout << "1 - Посмотреть все заявки\n2 - Посмотреть все поставки\n3 - Баланс" << endl;
+        try {
+            cin >> action;
+
+            if (action == 1)
+            {
+                acc->viewAllRequests(fileProdBuys, request, products);
+                cout << "\ne - для выхода" << endl;
+                cin >> empty;
+
+            }
+            else if (action == 2)
+            {
+                //acc->viewAllSends();
+                cout << "\ne - для выхода" << endl;
+                cin >> empty;
+            }
+            else if (action == 3) 
+            {
+                acc->viewFinReports(restaurant);
+            }
+        }
+        catch (exception ex) { cout << "Это не число" << endl; }
     } while (action != 0);
 }
 
@@ -1520,6 +1621,10 @@ int main()
                 break;
             case 3:
                 seller.SendProducts(request, products, restaurant, fileSent, productStore);
+                Authorization(employees, string_role);
+                break;
+            case 4:
+                Accountant_function(fileRequest, request, products, restaurant);
                 Authorization(employees, string_role);
                 break;
             default:
