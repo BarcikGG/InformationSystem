@@ -6,8 +6,10 @@
 #include <vector>
 #include <filesystem>
 #include <ctime>
+#include <nlohmann/json.hpp>
 #include "..\HashLib\HashPass.h"
 
+using json = nlohmann::json;
 using namespace std;
 
 //метод для очистки консоли
@@ -58,7 +60,7 @@ private:
     int balance; //баланс рестика
 
 public:
-    Restaurant(int initialBalance) : balance(initialBalance) {} //конструктор рестика
+    Restaurant(int _Balance) : balance(_Balance) {} //конструктор рестика
 
     //функция возвращающая баланс ресторана
     int getBalance() const {
@@ -108,10 +110,6 @@ public:
         }
     }
 
-    /*vector<Dish> GetDishs() {
-        return Dishs;
-    }*/
-
     //функция возвращающая название блюда
     string getMenuDishNameById(int id) {
         for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
@@ -127,6 +125,15 @@ public:
         for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
             if (Dish.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
                 return Dish.price; //возвращаем цену блюда
+            }
+        }
+        return 0; // Возвращаем 0, если продукт не найден
+    }
+
+    int GetCraft(int id) {
+        for (const auto& Dish : Dishs) { //цикл проходящий по всем позициям меню
+            if (Dish.id == id) { //проверка соответствия id искомого блюда с текущим в цикле
+                return Dish.craft; //возвращаем цену блюда
             }
         }
         return 0; // Возвращаем 0, если продукт не найден
@@ -150,8 +157,8 @@ private:
 
 public:
     //функция добавления блюда в заказ
-    void addItem(int id, string name, int price, int quantity) {
-        //items.emplace_back(id, name, price, quantity); //добавление блюда
+    void addItem(int id, string name, int craft_id, int time, int price, int quantity) {
+        items.emplace_back(id, name, craft_id, time, price, quantity); //добавление блюда
     }
 
     //вывод корзины в консоль
@@ -169,6 +176,52 @@ public:
             amount += item.price * item.quantity; //прибавляем к итоговой стоимости стоимость блюда умноженного на количество этого блюда
         }
         return amount; //возвращаем стоимость корзины
+    }
+
+    void saveToFile() {
+        char* documentsPath;
+        size_t len;
+        _dupenv_s(&documentsPath, &len, "USERPROFILE");
+        string filePath = documentsPath;
+
+        filePath += "\\Documents\\Orders.json";
+
+        json j;
+        
+        //проверяем, существует ли файл
+        ifstream inputFile(filePath);
+        if (inputFile.is_open()) {
+            inputFile >> j;  // Загружаем существующий JSON из файла
+            inputFile.close();
+        }
+
+        //создаем массив заказов, если его нет
+        if (!j.is_array()) {
+            j = json::array();
+        }
+
+        //создаем JSON-объект для нового заказа и добавляем его в массив
+        json newOrder;
+        newOrder["order_items"] = json::array();
+
+        for (const auto& item : items) {
+            json dishJson;
+            dishJson["id"] = item.id;
+            dishJson["name"] = item.name;
+            dishJson["price"] = item.price;
+            dishJson["quantity"] = item.quantity;
+            newOrder["order_items"].push_back(dishJson);
+        }
+
+        j.push_back(newOrder);
+
+        //сохраняем обновленный массив в файл
+        ofstream outputFile(filePath);
+        if (outputFile.is_open()) {
+            outputFile << j.dump(4);  //записываем в файл с отступами для удобного чтения
+            outputFile.close();
+            //cout << "Заказ добавлен в файл: " << filePath << endl;
+        }
     }
 };
 
@@ -724,7 +777,6 @@ public:
         }
     }
 
-
     void createProductRequest(vector<Product>& products, string& fileStore, ProductRequest& request, Restaurant& restaurant, AuditLog& log, string& fileRequest) {
         getStore(products, fileStore);
         string name;
@@ -880,7 +932,7 @@ public:
                 allOrdersAmount += product.price * quantity;
             }
         }
-        cout << "Всего заказано на: " << allOrdersAmount << endl;
+        cout << "Всего заказано на: " << allOrdersAmount << " руб" << endl;
     }
 
     void viewAllSends(string& fileSent, ProductRequest request, vector<Product>& products) {
@@ -929,7 +981,7 @@ public:
     void viewFinReports(Restaurant& res) {
         int answer = 0;
 
-        cout << "1 - Баланс рестика\n2 - Отчет продаж\n3 - Общие продажи " << endl;
+        cout << "1 - Баланс рестика\n2 - Отчет продаж" << endl;
         cin >> answer;
 
         switch (answer)
@@ -940,13 +992,64 @@ public:
             cin >> exit;
             break;
         case 2:
-
-            break;
-        case 3:
+            countSells();
+            cout << "e - exit: ";
+            cin >> exit;
             break;
         default:
             cout << "Неверное число" << endl;
             break;
+        }
+    }
+
+    void countSells() 
+    {
+        char* documentsPath;
+        size_t len;
+        _dupenv_s(&documentsPath, &len, "USERPROFILE");
+        string filePath = documentsPath;
+        filePath += "\\Documents\\Orders.json";
+
+        int totalProfit = 0;
+        int totalPrice;
+        int totalQuantity;
+
+        ifstream inputFile(filePath);
+        if (inputFile.is_open()) {
+            json j;
+            inputFile >> j;  //загружаем содержимое файла в JSON-объект
+
+            unordered_map<string, int> CountMoneyMap;
+
+            for (const auto& order : j) {
+                if (order.contains("order_items")) {
+                    for (const auto& item : order["order_items"]) {
+                        if (item.contains("name") && item.contains("price") && item.contains("quantity")) {
+                            string name = item["name"];
+                            int price = item["price"];
+                            int quantity = item["quantity"];
+                            int totalPrice = price * quantity;
+
+                            CountMoneyMap[name] += totalPrice;
+                        }
+
+                        totalPrice = item["price"];
+                        totalQuantity = item["quantity"];
+
+                        totalProfit += totalPrice* totalQuantity;
+                    }
+                }
+            }
+
+            for (const auto& pair : CountMoneyMap) {
+                cout << "Блюдо: " << pair.first << ", Всего прибыль: " << pair.second << endl;
+            }
+            cout << "Общая прибыль с продаж: " << totalProfit << " руб" << endl;
+
+            inputFile.close();
+        }
+        else {
+            cout << "Ошибка при открытии файла: " << filePath << endl;
         }
     }
 };
@@ -993,15 +1096,12 @@ public:
 };
 
 //метод для работы с гостем
-int Guest(Menu menu, Restaurant restaurant) {
+int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket backet) {
     //isLogin = true; //переменная для определения статуса пользователя и управления циклом
     char answer; //ответ гостя по заказа (да/нет)
     char action; //действие гостя (просмотр статуса или смена роли)
     int status = 0; //статус заказа
     int guest_amount; //сумма которую заплатил гость
-
-    unique_ptr<GuestOrderBasket> backet = make_unique<GuestOrderBasket>(); // создание умного указателя корзины
-    unique_ptr<Order> order = make_unique<Order>(); // создание умного указателя заказа
 
     clearConsole();
     menu.GetMenu(); //выводим меню для гостя
@@ -1020,15 +1120,13 @@ int Guest(Menu menu, Restaurant restaurant) {
             cin >> quantity;
 
             if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << DishName << endl;
-            else backet->addItem(id, DishName, menu.GetPrice(id), quantity);
-
-            cout << AvailableQuantity << endl;
+            else backet.addItem(id, DishName, menu.GetCraft(id), 0, menu.GetPrice(id), quantity);
         }
         else cout << DishName << endl;
     } while (id != 0);
 
     clearConsole();
-    backet->printBasket();
+    backet.printBasket();
 
     do {
         cout << "Подтвердить заказ? (y/n): ";
@@ -1037,13 +1135,14 @@ int Guest(Menu menu, Restaurant restaurant) {
         if (answer == 'y') {
             do {
                 try {
-                    cout << "К оплате: " << backet->Amount() << "\nВаша сумма: ";
+                    cout << "К оплате: " << backet.Amount() << "\nВаша сумма: ";
                     cin >> guest_amount;
 
-                    if (guest_amount >= backet->Amount()) {
+                    if (guest_amount >= backet.Amount()) {
                         clearConsole();
                         restaurant.deposit(guest_amount);
-                        order->confirmOrder();
+                        order.confirmOrder();
+                        backet.saveToFile();
                         cout << "Спасибо! Ваш заказ передан на кухню." << endl;
                         break;
                     }
@@ -1051,7 +1150,7 @@ int Guest(Menu menu, Restaurant restaurant) {
                 }
                 catch (exception) {}
 
-            } while (guest_amount < backet->Amount());
+            } while (guest_amount < backet.Amount());
             break;
         }
     } while (answer != 'y' || answer != 'n');
@@ -1062,7 +1161,7 @@ int Guest(Menu menu, Restaurant restaurant) {
 
         if (action == 's') {
             clearConsole();
-            cout << order->GetStatus() << endl;
+            cout << order.GetStatus() << endl;
         }
     } while (action != 'r');
 
@@ -1626,6 +1725,8 @@ int main()
     Seller seller;
     ProductRequest request;
     ProductStoreMap productStore;
+    GuestOrderBasket backet;
+    Order order;
 
     vector<Employee> employees;
     vector<Dish> dishs;
@@ -1673,8 +1774,7 @@ int main()
     while (true) {
         string authorization_result = Authorization(employees, string_role);
         if (authorization_result == "guest") {
-            Guest(menu, restaurant);
-            Authorization(employees, string_role);
+            Guest(menu, restaurant, order, backet);
         }
         else if (authorization_result == "employee") {
             int role = checkRole(string_role);
