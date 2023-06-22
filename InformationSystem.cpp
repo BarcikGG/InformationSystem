@@ -156,6 +156,12 @@ private:
     vector<Dish> items; //лист с блюдами заказа
 
 public:
+
+    vector<Dish> getDishs() 
+    {
+        return items;
+    }
+
     //функция добавления блюда в заказ
     void addItem(int id, string name, int craft_id, int time, int price, int quantity) {
         items.emplace_back(id, name, craft_id, time, price, quantity); //добавление блюда
@@ -1056,105 +1062,111 @@ public:
 
 class Chef {
 public:
-    void viewOrders(const vector<Order>& orders) {
-        // Логика просмотра всех заказов
+    string dish_name;
+    int completedDish = 0;
+
+    void viewOrders(GuestOrderBasket& backet) {
+        //вывод заказа
+        backet.printBasket();
+        cout << "--------------------------" << endl;
     }
 
-    void startPreparation(Order& order) {
-        // Логика начала приготовления заказа
+    void startPreparation(GuestOrderBasket& backet, Order& order, map<int, vector<string>>& craft_map) {
+        int dishsCount = backet.getDishs().size();
+        order.CookingOrder();
+        //логика начала приготовления заказа
+        do {
+            viewOrders(backet);
+            cout << "Введите название блюда для приготовления: ";
+            cin >> dish_name;
+
+            for (const auto& dish : backet.getDishs())
+            {
+                if (dish.name == dish_name && completedDish < dishsCount)
+                {
+                    if (prepareItem(dish, order, craft_map))
+                    {
+                        completedDish++;
+                    }
+                }
+                else if (completedDish == dishsCount) 
+                {
+                    cout << "Заказ приготовлен!" << endl;
+                    order.DeliveryOrder();
+                    break;
+                }
+            }
+        } while (dish_name != "exit");
     }
 
-    void prepareItem(Order& order, int menuItemIndex, const vector<int>& DishNumbers) {
-        // Логика приготовления конкретного пункта заказа
+    bool prepareItem(Dish dish, Order& order, map<int, vector<string>>& craft_map) {
+        vector<string> _products_to_craft;
+        string productsInCraft;
+
+        for (const auto& craft : craft_map) 
+        {
+            if (dish.craft == craft.first) _products_to_craft = craft.second;
+        }
+
+        cout << "Для приготовления нужно: " << endl;
+        for (const auto& product : _products_to_craft) 
+        {
+            cout << product << endl;
+        }
+        cout << "----------------" << endl;
+
+        cout << "Введите продукты (через пробел): ";
+        cin.ignore();
+        getline(cin, productsInCraft);
+
+        //разделить строку на отдельные продукты
+        stringstream ss(productsInCraft);
+        string product;
+        vector<string> chefProducts;
+
+        while (ss >> product) {
+            chefProducts.push_back(product);
+        }
+
+        //сравниваем векторы
+        if (chefProducts == _products_to_craft) {
+            cout << "Блюдо приготовлено!" << endl;
+
+            return true;
+        }
+        else {
+            cout << "Неверные продукты или порядок" << endl;
+            return false;
+        }
     }
 };
 
 // Класс официанта
 class Waiter {
 public:
-    void viewAvailableOrders(const vector<Order>& orders) {
-        // Логика просмотра доступных для выдачи заказов
+    string action;
+
+    void viewAvailableOrders(Order& order) {
+        if (order.status == "Передан официанту") 
+        {
+            cout << "Есть готовый заказ!\nПодать? y/n" << endl;
+            cin >> action;
+            if (action == "y") changeOrderStatus(order);
+        }
+        else 
+        {
+            cout << "Готовых заказов нет" << endl;
+        }
     }
 
-    void changeOrderStatus(Order& order, int status) {
-        switch (status)
-        {
-        case 1:
-            order.CookingOrder();
-            break;
-        case 2:
-            order.DeliveryOrder();
-            break;
-        case 3:
-            order.CompleteOrder();
-            break;
-        default:
-            cout << "Неверный номер" << endl;
-            break;
-        }
+    void changeOrderStatus(Order& order) {
+        order.CompleteOrder();
     }
 };
 
-//метод для работы с гостем
-int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket backet) {
-    //isLogin = true; //переменная для определения статуса пользователя и управления циклом
-    char answer; //ответ гостя по заказа (да/нет)
-    char action; //действие гостя (просмотр статуса или смена роли)
-    int status = 0; //статус заказа
-    int guest_amount; //сумма которую заплатил гость
-
-    clearConsole();
-    menu.GetMenu(); //выводим меню для гостя
-    int id = 0; //id для ввода номера заказа
-
-    do {
-        int quantity = 0;
-        cout << "Для заказа блюда, введите его номер (0 - завершить): " << endl;
-        cin >> id;
-
-        string DishName = menu.getMenuDishNameById(id);
-        int AvailableQuantity = menu.GetQuantity(id);
-
-        if (menu.isAvailable(DishName, quantity)) {
-            cout << "Количество: " << endl;
-            cin >> quantity;
-
-            if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << DishName << endl;
-            else backet.addItem(id, DishName, menu.GetCraft(id), 0, menu.GetPrice(id), quantity);
-        }
-        else cout << DishName << endl;
-    } while (id != 0);
-
-    clearConsole();
-    backet.printBasket();
-
-    do {
-        cout << "Подтвердить заказ? (y/n): ";
-        cin >> answer;
-
-        if (answer == 'y') {
-            do {
-                try {
-                    cout << "К оплате: " << backet.Amount() << "\nВаша сумма: ";
-                    cin >> guest_amount;
-
-                    if (guest_amount >= backet.Amount()) {
-                        clearConsole();
-                        restaurant.deposit(guest_amount);
-                        order.confirmOrder();
-                        backet.saveToFile();
-                        cout << "Спасибо! Ваш заказ передан на кухню." << endl;
-                        break;
-                    }
-                    else cout << "Недостаточно средств" << endl;
-                }
-                catch (exception) {}
-
-            } while (guest_amount < backet.Amount());
-            break;
-        }
-    } while (answer != 'y' || answer != 'n');
-
+void checkStatus(Order& order)
+{
+    char action;
     do {
         cout << "s - статус заказа\nr - смена роли" << endl;
         cin >> action;
@@ -1164,6 +1176,81 @@ int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket bac
             cout << order.GetStatus() << endl;
         }
     } while (action != 'r');
+}
+
+//метод для работы с гостем
+int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& backet) {
+    //isLogin = true; //переменная для определения статуса пользователя и управления циклом
+    char answer; //ответ гостя по заказа (да/нет)
+    char action; //действие гостя (просмотр статуса или смена роли)
+    int status = 0; //статус заказа
+    int guest_amount; //сумма которую заплатил гость
+    int action_select;
+
+    clearConsole();
+    menu.GetMenu(); //выводим меню для гостя
+    int id = 0; //id для ввода номера заказа
+
+    do 
+    {
+        clearConsole();
+        cout << "1 - Сделать заказ\n2 - Посмотреть статус" << endl;
+        cin >> action_select;
+        if (action_select == 1)
+        {
+            do {
+                int quantity = 0;
+                cout << "Для заказа блюда, введите его номер (0 - завершить): " << endl;
+                cin >> id;
+
+                string DishName = menu.getMenuDishNameById(id);
+                int AvailableQuantity = menu.GetQuantity(id);
+
+                if (menu.isAvailable(DishName, quantity)) {
+                    cout << "Количество: " << endl;
+                    cin >> quantity;
+
+                    if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << DishName << endl;
+                    else backet.addItem(id, DishName, menu.GetCraft(id), 0, menu.GetPrice(id), quantity);
+                }
+                else cout << DishName << endl;
+            } while (id != 0);
+
+            clearConsole();
+            backet.printBasket();
+
+            do {
+                cout << "Подтвердить заказ? (y/n): ";
+                cin >> answer;
+
+                if (answer == 'y') {
+                    do {
+                        try {
+                            cout << "К оплате: " << backet.Amount() << "\nВаша сумма: ";
+                            cin >> guest_amount;
+
+                            if (guest_amount >= backet.Amount()) {
+                                clearConsole();
+                                restaurant.deposit(guest_amount);
+                                order.confirmOrder();
+                                backet.saveToFile();
+                                cout << "Спасибо! Ваш заказ передан на кухню." << endl;
+                                break;
+                            }
+                            else cout << "Недостаточно средств" << endl;
+                        }
+                        catch (exception) {}
+
+                    } while (guest_amount < backet.Amount());
+                    break;
+                }
+            } while (answer != 'y' || answer != 'n');
+        }
+        else if (action_select == 2) 
+        { 
+            checkStatus(order);
+        }
+    } while (action_select != 0);
 
     clearConsole();
     return 0;
@@ -1208,6 +1295,7 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
             cin >> password;
 
             adm->addEmployee(role, surname, name, patronymic, username, HF(password), filename, employees);
+            employees.push_back({ role, surname, name, patronymic, username, HF(password) });
             log.addEntry("Админ добавил сотрудника: " + surname + " " + name);
         }
         else if (action == 2) {
@@ -1403,6 +1491,62 @@ void Accountant_function(string& fileSells, string& fileProdBuys, ProductRequest
             }
         }
         catch (exception ex) { cout << "Это не число" << endl; }
+    } while (action != 0);
+}
+
+void Chef_function(GuestOrderBasket& backet, Order& order, map<int, vector<string>>& craft_map) 
+{
+    Chef chef;
+    int action;
+    string empty;
+
+    do 
+    {
+        clearConsole();
+        cout << "1 - Посмотреть заказ\n2 - Приготовить" << endl;
+        cin >> action;
+
+        if (action == 1) 
+        {
+            chef.viewOrders(backet);
+            cout << "\ne - для выхода" << endl;
+            cin >> empty;
+        }
+        else if (action == 2) 
+        {
+            chef.startPreparation(backet, order, craft_map);
+            cout << "\ne - для выхода" << endl;
+            cin >> empty;
+        }
+
+    } while (action != 0);
+}
+
+void Waiter_function(Order& order) 
+{
+    Waiter waiter;
+    int action;
+    string empty;
+
+    do 
+    {
+        clearConsole();
+        cout << "1 - Посмотреть заказы\n2 - Передать" << endl;
+        cin >> action;
+
+        if (action == 1) 
+        {
+            waiter.viewAvailableOrders(order);
+            cout << "\ne - для выхода" << endl;
+            cin >> empty;
+        }
+        else if (action == 2 && order.status == "Передано официанту")
+        {
+            waiter.changeOrderStatus(order);
+            cout << "\ne - для выхода" << endl;
+            cin >> empty;
+        }
+
     } while (action != 0);
 }
 
@@ -1792,6 +1936,12 @@ int main()
                 break;
             case 4:
                 Accountant_function(fileSent, fileRequest, request, products, restaurant);
+                break;
+            case 5:
+                Chef_function(backet, order, Dish_craft);
+                break;
+            case 6:
+                Waiter_function(order);
                 break;
             default:
                 cout << "Роль не найдена" << endl;
