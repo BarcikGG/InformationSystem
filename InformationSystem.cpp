@@ -8,6 +8,7 @@
 #include <ctime>
 #include <nlohmann/json.hpp>
 #include "..\HashLib\HashPass.h"
+#include <set>
 
 using json = nlohmann::json;
 using namespace std;
@@ -82,7 +83,6 @@ public:
     }
 };
 
-
 // Класс меню
 class Menu {
 private:
@@ -92,12 +92,51 @@ public:
     //конструктор меню
     Menu(vector<Dish> _dishs) : Dishs(_dishs) {}
 
+    bool allCraftInProducts(const vector<string>& craft, const vector<string>& products) {
+        //создаем множества для уникальных элементов векторов
+        set<string> craftSet(craft.begin(), craft.end());
+        set<string> productsSet(products.begin(), products.end());
+
+        //проверяем, содержатся ли все элементы из craftSet в productsSet
+        for (const string& item : craftSet) {
+            if (productsSet.find(item) == productsSet.end()) {
+                //если элемент не найден в productsSet, возвращаем false
+                return false;
+            }
+        }
+
+        //все элементы из craftSet найдены в productsSet, возвращаем true
+        return true;
+    }
+
     //функция проверки доступности блюда для заказа
-    bool isAvailable(const string name, int quantity) {
+    bool isAvailable(string name, int quantity, map<int, vector<string>>& craft_map, vector<Product>& products) {
+        
+        vector<string> craft;
+        vector<string> products_string;
+
         for (const auto& Dish : Dishs) { //циклом проходимся по всем позициям меню
             //проверяем, что конкретное блюдо в количество больше или равно запрашиваемому количеству
-            if (Dish.name == name && Dish.quantity >= quantity) {
-                return true; //возвращаем true если блюдо есть
+            if (Dish.name == name) {
+                
+                for (const auto& pair : craft_map) 
+                {
+                    if (pair.first == Dish.id) craft = pair.second;
+                }
+
+                for (const auto& product : products) 
+                {
+                    products_string.push_back(product.name);
+                }
+                
+
+                if (allCraftInProducts(craft, products_string)) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+
             }
         }
         return false; //блюдо не доступно
@@ -1179,7 +1218,7 @@ void checkStatus(Order& order)
 }
 
 //метод для работы с гостем
-int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& backet) {
+int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& backet, map<int, vector<string>>& craft_map, vector<Product>& products) {
     //isLogin = true; //переменная для определения статуса пользователя и управления циклом
     char answer; //ответ гостя по заказа (да/нет)
     char action; //действие гостя (просмотр статуса или смена роли)
@@ -1188,7 +1227,6 @@ int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& ba
     int action_select;
 
     clearConsole();
-    menu.GetMenu(); //выводим меню для гостя
     int id = 0; //id для ввода номера заказа
 
     do 
@@ -1199,6 +1237,7 @@ int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& ba
         if (action_select == 1)
         {
             do {
+                menu.GetMenu(); //выводим меню для гостя
                 int quantity = 0;
                 cout << "Для заказа блюда, введите его номер (0 - завершить): " << endl;
                 cin >> id;
@@ -1206,14 +1245,14 @@ int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& ba
                 string DishName = menu.getMenuDishNameById(id);
                 int AvailableQuantity = menu.GetQuantity(id);
 
-                if (menu.isAvailable(DishName, quantity)) {
+                if (menu.isAvailable(DishName, quantity, craft_map, products)) {
                     cout << "Количество: " << endl;
                     cin >> quantity;
 
                     if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << DishName << endl;
                     else backet.addItem(id, DishName, menu.GetCraft(id), 0, menu.GetPrice(id), quantity);
                 }
-                else cout << DishName << endl;
+                else cout << DishName << " сейчас недоступен" << endl;
             } while (id != 0);
 
             clearConsole();
@@ -1918,7 +1957,7 @@ int main()
     while (true) {
         string authorization_result = Authorization(employees, string_role);
         if (authorization_result == "guest") {
-            Guest(menu, restaurant, order, backet);
+            Guest(menu, restaurant, order, backet, Dish_craft, products);
         }
         else if (authorization_result == "employee") {
             int role = checkRole(string_role);
