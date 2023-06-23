@@ -8,7 +8,13 @@
 #include <ctime>
 #include <nlohmann/json.hpp>
 #include "..\HashLib\HashPass.h"
+#include "Product.h"
+#include "Restaurant.h"
+#include "Dish.h"
 #include <set>
+#include <windows.h>
+#include <chrono>
+#include <thread>
 
 using json = nlohmann::json;
 using namespace std;
@@ -18,30 +24,23 @@ void clearConsole() {
     system("cls");
 }
 
-// Класс блюда
-class Product {
-public:
-    int id; //id продукта
-    string name; //название продукта
-    int price; //цена продукта (закупочная)
+//метод для вывода текущего времени в отдельном потоке
+void printCurrentTime() {
+    while (true) {
+        clearConsole();
+        // Получаем текущее время
+        auto currentTime = chrono::system_clock::now();
+        time_t time = chrono::system_clock::to_time_t(currentTime);
 
-    //конструктор продукта
-    Product(int _id, const string _name, int _price) : id(_id), name(_name), price(_price) {}
-};
+        // Выводим текущее время на первую строку консоли
+        char timeString[26];
+        ctime_s(timeString, sizeof(timeString), &time);
+        cout << "\r" << timeString << flush;
 
-// Класс блюда
-class Dish {
-public:
-    int id; //id блюда
-    string name; //название блюда
-    int craft; //рецепт
-    int time; //время готовки
-    int price; //цена блюда
-    int quantity; //кол-во блюд в наличии
-
-    //конструктор блюда
-    Dish(int _id, const string _name, int _craft, int _time, int _price, int _quantity) : id(_id), name(_name), craft(_craft), time(_time), price(_price), quantity(_quantity) {}
-};
+        // Ждем 1 секунду перед следующим обновлением времени
+        this_thread::sleep_for(chrono::seconds(1));
+    }
+}
 
 class ProductRequest {
 public:
@@ -53,34 +52,6 @@ class ProductStoreMap {
 public:
     // Ключ - идентификатор продукта, Значение - количество продукта
     map<int, int> ProductStore_map; 
-};
-
-// Класс ресторан
-class Restaurant {
-private:
-    int balance; //баланс рестика
-
-public:
-    Restaurant(int _Balance) : balance(_Balance) {} //конструктор рестика
-
-    //функция возвращающая баланс ресторана
-    int getBalance() const {
-        return balance;
-    }
-
-    //функция для пополнения баланса ресторана
-    void deposit(int amount) {
-        balance += amount; //пополняем баланс
-    }
-
-    //функция для списания средств со счета ресторана
-    bool withdraw(int amount) {
-        if (amount <= balance) { //проверяем, что списываем меньше или сумму баланса рестика
-            balance -= amount; //списываем бабки
-            return true;  // Успешное списание средств
-        }
-        return false;  // Недостаточно средств на балансе
-    }
 };
 
 // Класс меню
@@ -121,20 +92,22 @@ public:
                 
                 for (const auto& pair : craft_map) 
                 {
+                    //заполняем вектор продуктами из рецепта
                     if (pair.first == Dish.id) craft = pair.second;
                 }
 
                 for (const auto& product : products) 
                 {
+                    //заполняем вектор всеми продуктами
                     products_string.push_back(product.name);
                 }
                 
-
+                //проверяем, что все блюда для рецепта есть в ресторане
                 if (allCraftInProducts(craft, products_string)) {
-                    return true;
+                    return true; //продукты есть
                 }
                 else {
-                    return false;
+                    return false; //продукты не все
                 }
 
             }
@@ -753,10 +726,10 @@ public:
                 outputFile << log << " " << endl;
             }
             outputFile.close();
-            cout << "Продукты успешно сохранены в файл." << endl;
+            cout << "Логи успешно сохранены в файл." << endl;
         }
         else {
-            cerr << "Не удалось открыть файл продуктов для записи." << endl;
+            cerr << "Не удалось открыть файл логов для записи." << endl;
         }
     }
 };
@@ -1110,7 +1083,7 @@ public:
         cout << "--------------------------" << endl;
     }
 
-    void startPreparation(GuestOrderBasket& backet, Order& order, map<int, vector<string>>& craft_map) {
+    void startPreparation(GuestOrderBasket& backet, Order& order, map<int, vector<string>>& craft_map, AuditLog& log) {
         int dishsCount = backet.getDishs().size();
         order.CookingOrder();
         //логика начала приготовления заказа
@@ -1131,6 +1104,7 @@ public:
                 else if (completedDish == dishsCount) 
                 {
                     cout << "Заказ приготовлен!" << endl;
+                    log.addEntry("Повар приготовил заказ");
                     order.DeliveryOrder();
                     break;
                 }
@@ -1218,10 +1192,10 @@ void checkStatus(Order& order)
 }
 
 //метод для работы с гостем
-int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& backet, map<int, vector<string>>& craft_map, vector<Product>& products) {
+int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& backet, map<int, vector<string>>& craft_map, vector<Product>& products, AuditLog& log) {
     //isLogin = true; //переменная для определения статуса пользователя и управления циклом
-    char answer; //ответ гостя по заказа (да/нет)
-    char action; //действие гостя (просмотр статуса или смена роли)
+    string answer; //ответ гостя по заказа (да/нет)
+    string action; //действие гостя (просмотр статуса или смена роли)
     int status = 0; //статус заказа
     int guest_amount; //сумма которую заплатил гость
     int action_select;
@@ -1240,14 +1214,24 @@ int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& ba
                 menu.GetMenu(); //выводим меню для гостя
                 int quantity = 0;
                 cout << "Для заказа блюда, введите его номер (0 - завершить): " << endl;
-                cin >> id;
+                
+                while (!(cin >> id)) {
+                    cout << "Некорректный ввод. Введите целое число: ";
+                    cin.clear();
+                    cin.ignore(1000, '\n');
+                }
 
-                string DishName = menu.getMenuDishNameById(id);
-                int AvailableQuantity = menu.GetQuantity(id);
+                string DishName = menu.getMenuDishNameById(id); //получаем название по id блюда
+                int AvailableQuantity = menu.GetQuantity(id); //получаем доступное кол-во блюд (уже готовых)
 
                 if (menu.isAvailable(DishName, quantity, craft_map, products)) {
                     cout << "Количество: " << endl;
-                    cin >> quantity;
+                    
+                    while (!(cin >> quantity)) {
+                        cout << "Некорректный ввод. Введите целое число: ";
+                        cin.clear();
+                        cin.ignore(1000, '\n');
+                    }
 
                     if (AvailableQuantity < quantity) cout << "У нас всего: " << AvailableQuantity << "шт. " << DishName << endl;
                     else backet.addItem(id, DishName, menu.GetCraft(id), 0, menu.GetPrice(id), quantity);
@@ -1262,7 +1246,7 @@ int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& ba
                 cout << "Подтвердить заказ? (y/n): ";
                 cin >> answer;
 
-                if (answer == 'y') {
+                if (answer == "y") {
                     do {
                         try {
                             cout << "К оплате: " << backet.Amount() << "\nВаша сумма: ";
@@ -1274,6 +1258,7 @@ int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& ba
                                 order.confirmOrder();
                                 backet.saveToFile();
                                 cout << "Спасибо! Ваш заказ передан на кухню." << endl;
+                                log.addEntry("Гость сделал заказ");
                                 break;
                             }
                             else cout << "Недостаточно средств" << endl;
@@ -1283,7 +1268,11 @@ int Guest(Menu& menu, Restaurant& restaurant, Order& order, GuestOrderBasket& ba
                     } while (guest_amount < backet.Amount());
                     break;
                 }
-            } while (answer != 'y' || answer != 'n');
+                else if (answer == "n") 
+                {
+                    return 0;
+                }
+            } while (answer != "y" || answer != "n");
         }
         else if (action_select == 2) 
         { 
@@ -1341,16 +1330,48 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
             adm->getDishes(dishs, fileDish, Craft_map);
             cout << "Id: ";
             cin >> id;
+
+            for (const auto& dish : dishs) {
+                if (id == dish.id) {
+                    cout << "Id занят! Введите другой: ";
+                    while (!(cin >> id)) {
+                        cout << "Некорректный ввод. Введите целое число: ";
+                        cin.clear();
+                        cin.ignore(1000, '\n');
+                    }
+                    // После успешного ввода нового id, проверяем его уникальность возвращаясь в цикл
+                    continue;
+                }
+            }
+
             cout << "Название: ";
             cin.ignore();
             getline(cin, name);
+
+            // Проверка корректности ввода цены
             cout << "Цена: ";
-            cin >> price;
+            while (!(cin >> price)) {
+                cout << "Некорректный ввод. Введите целое число: ";
+                cin.clear();
+                cin.ignore(1000, '\n');
+            }
+
+            // Проверка корректности ввода времени готовки
             cout << "Время готовки: ";
-            cin >> time;
+            while (!(cin >> time)) {
+                cout << "Некорректный ввод. Введите целое число: ";
+                cin.clear();
+                cin.ignore(1000, '\n');
+            }
+
+            // Проверка корректности ввода количества
             cout << "Кол-во: ";
-            cin >> quantity;
-            
+            while (!(cin >> quantity)) {
+                cout << "Некорректный ввод. Введите целое число: ";
+                cin.clear();
+                cin.ignore(1000, '\n');
+            }
+
             adm->getProducts(products, fileProd);
             cout << "Рецепт: ";
             cin.ignore(); // Очищаем символ новой строки из входного буфера
@@ -1372,10 +1393,30 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
             adm->getProducts(products, fileProd);
             cout << "ID: ";
             cin >> id;
+            
+            // Проверка уникальности введенного id
+            for (const auto& product : products) {
+                if (id == product.id) {
+                    cout << "ID занят. Введите уникальное целое число: ";
+                    while (!(cin >> id)) {
+                        cout << "Некорректный ввод. Введите уникальное целое число: ";
+                        cin.clear();
+                        cin.ignore(1000, '\n');
+                    }
+                    continue;
+                }
+            }
+
             cout << "Название: ";
             cin >> name;
+
+            // Проверка на корректность ввода цены
             cout << "Цена: ";
-            cin >> price;
+            while (!(cin >> price)) {
+                cout << "Некорректный ввод. Введите целое число: ";
+                cin.clear();
+                cin.ignore(1000, '\n');
+            }
 
             adm->addProduct(id, name, price, products, fileProd);
             storeMap.ProductStore_map[id] = { 1 };
@@ -1406,14 +1447,47 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
             adm->getDishes(dishs, fileDish, Craft_map);
             cout << "ID блюда: " << endl;
             cin >> id;
-            cout << "Новое название: " << endl;
-            cin >> name;
-            cout << "Новая цена: " << endl;
-            cin >> price;
-            cout << "Новое время: " << endl;
-            cin >> time;
-            cout << "Новое кол-во: " << endl;
-            cin >> quantity;
+            
+            for (const auto& dish : dishs) {
+                if (id == dish.id) {
+                    cout << "Id занят! Введите другой: ";
+                    while (!(cin >> id)) {
+                        cout << "Некорректный ввод. Введите целое число: ";
+                        cin.clear();
+                        cin.ignore(1000, '\n');
+                    }
+                    // После успешного ввода нового id, проверяем его уникальность возвращаясь в цикл
+                    continue;
+                }
+            }
+
+            cout << "Название: ";
+            cin.ignore();
+            getline(cin, name);
+
+            // Проверка корректности ввода цены
+            cout << "Цена: ";
+            while (!(cin >> price)) {
+                cout << "Некорректный ввод. Введите целое число: ";
+                cin.clear();
+                cin.ignore(1000, '\n');
+            }
+
+            // Проверка корректности ввода времени готовки
+            cout << "Время готовки: ";
+            while (!(cin >> time)) {
+                cout << "Некорректный ввод. Введите целое число: ";
+                cin.clear();
+                cin.ignore(1000, '\n');
+            }
+
+            // Проверка корректности ввода количества
+            cout << "Кол-во: ";
+            while (!(cin >> quantity)) {
+                cout << "Некорректный ввод. Введите целое число: ";
+                cin.clear();
+                cin.ignore(1000, '\n');
+            }
 
             adm->getProducts(products, fileProd);
             cout << "Новый рецепт: ";
@@ -1436,12 +1510,33 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
         else if (action == 7) {
             int newPrice;
             adm->getProducts(products, fileProd);
-            cout << "Название продукта: " << endl;
-            cin >> name;
-            cout << "Новый id: " << endl;
+            
+            cout << "ID: ";
             cin >> id;
-            cout << "Новая цена: " << endl;
-            cin >> newPrice;
+
+            // Проверка уникальности введенного id
+            for (const auto& product : products) {
+                if (id == product.id) {
+                    cout << "ID занят. Введите уникальное целое число: ";
+                    while (!(cin >> id)) {
+                        cout << "Некорректный ввод. Введите уникальное целое число: ";
+                        cin.clear();
+                        cin.ignore(1000, '\n');
+                    }
+                    continue;
+                }
+            }
+
+            cout << "Название: ";
+            cin >> name;
+
+            // Проверка на корректность ввода цены
+            cout << "Цена: ";
+            while (!(cin >> newPrice)) {
+                cout << "Некорректный ввод. Введите целое число: ";
+                cin.clear();
+                cin.ignore(1000, '\n');
+            }
 
             Product editedProd = {id, name, newPrice};
             adm->editProduct(editedProd, products, fileProd);
@@ -1454,11 +1549,13 @@ void Admin_function(string& filename, string& fileCraft, string& fileDish, strin
             cin >> id;
 
             for (const auto& prod : products) {
-                if (prod.id == id) prodName = prod.name;
+                if (prod.id == id) 
+                { 
+                    prodName = prod.name; 
+                    adm->removeProduct(id, products, fileProd);
+                    log.addEntry("Админ удалил продукт: " + prodName);
+                }
             }
-
-            adm->removeProduct(id, products, fileProd);
-            log.addEntry("Админ удалил продукт: " + prodName);
         }
 
     } while (action != 0);
@@ -1533,7 +1630,7 @@ void Accountant_function(string& fileSells, string& fileProdBuys, ProductRequest
     } while (action != 0);
 }
 
-void Chef_function(GuestOrderBasket& backet, Order& order, map<int, vector<string>>& craft_map) 
+void Chef_function(GuestOrderBasket& backet, Order& order, map<int, vector<string>>& craft_map, AuditLog& log) 
 {
     Chef chef;
     int action;
@@ -1553,7 +1650,7 @@ void Chef_function(GuestOrderBasket& backet, Order& order, map<int, vector<strin
         }
         else if (action == 2) 
         {
-            chef.startPreparation(backet, order, craft_map);
+            chef.startPreparation(backet, order, craft_map, log);
             cout << "\ne - для выхода" << endl;
             cin >> empty;
         }
@@ -1561,7 +1658,7 @@ void Chef_function(GuestOrderBasket& backet, Order& order, map<int, vector<strin
     } while (action != 0);
 }
 
-void Waiter_function(Order& order) 
+void Waiter_function(Order& order, AuditLog& log) 
 {
     Waiter waiter;
     int action;
@@ -1582,6 +1679,7 @@ void Waiter_function(Order& order)
         else if (action == 2 && order.status == "Передано официанту")
         {
             waiter.changeOrderStatus(order);
+            log.addEntry("Официант передал заказ");
             cout << "\ne - для выхода" << endl;
             cin >> empty;
         }
@@ -1772,10 +1870,6 @@ void CheckProductsFile(char* documentsPath, string filename, vector<Product>& pr
 }
 
 void CheckLogsFile(char* documentsPath, string filename, AuditLog& log) {
-    
-    auto f = [&log](string oldLog) {
-        log.addOldLogs(oldLog);
-    };
 
     if (documentsPath != nullptr) {
         // Проверка существования файла логов
@@ -1788,14 +1882,7 @@ void CheckLogsFile(char* documentsPath, string filename, AuditLog& log) {
             if (inputFile.is_open()) {
                 string line;
                 while (getline(inputFile, line)) {
-                    stringstream ss(line);
-
-                    string current_log;
-                    if (ss >> current_log) {
-                        if (ss >> current_log) {
-                            f(current_log);
-                        }
-                    }
+                    log.addOldLogs(line);
                 }
                 inputFile.close();
             }
@@ -1862,6 +1949,7 @@ int checkRole(string role) {
     roles_map.emplace(4, "Buhgalter");
     roles_map.emplace(5, "Povar");
     roles_map.emplace(6, "Waiter");
+    roles_map.emplace(7, "Secret");
 
     for (const auto& pair : roles_map) {
         if (pair.second == role) {
@@ -1897,6 +1985,17 @@ string Authorization(vector<Employee> employees, string& string_role) {
         }
         return "nobody";
     }
+}
+
+void secretUser() 
+{
+    string exit;
+    thread timeThread(printCurrentTime);
+    
+    //ввод для выхода
+    cout << "e - Выход " << endl;
+    cin >> exit;
+    if(exit == "e") timeThread.join();     //останавливаем поток и ждем его завершения
 }
 
 int main()
@@ -1957,7 +2056,9 @@ int main()
     while (true) {
         string authorization_result = Authorization(employees, string_role);
         if (authorization_result == "guest") {
-            Guest(menu, restaurant, order, backet, Dish_craft, products);
+            Beep(7000, 500);
+            Guest(menu, restaurant, order, backet, Dish_craft, products, log);
+            Beep(1000, 100);
         }
         else if (authorization_result == "employee") {
             int role = checkRole(string_role);
@@ -1965,22 +2066,38 @@ int main()
             switch (role)
             {
             case 1:
+                //воспроизведение звука "бип" (частота, длительность мс)
+                Beep(1000, 500);
                 Admin_function(filePath, fileCraft, fileDish, fileProd, Dish_craft, employees, dishs, products, log, productStore);
+                Beep(1000, 100);
                 break;
             case 2:
+                Beep(2000, 500);
                 StoreKeeper_function(products, fileStore, request, restaurant, log, fileRequest);
+                Beep(1000, 100);
                 break;
             case 3:
+                Beep(3000, 500);
                 seller.SendProducts(productStore, request, products, restaurant, fileSent, fileStore, productStore);
+                Beep(1000, 100);
                 break;
             case 4:
+                Beep(4000, 500);
                 Accountant_function(fileSent, fileRequest, request, products, restaurant);
+                Beep(1000, 100);
                 break;
             case 5:
-                Chef_function(backet, order, Dish_craft);
+                Beep(5000, 500);
+                Chef_function(backet, order, Dish_craft, log);
+                Beep(1000, 100);
                 break;
             case 6:
-                Waiter_function(order);
+                Beep(6000, 500);
+                Waiter_function(order, log);
+                Beep(1000, 100);
+                break;
+            case 7:
+                secretUser();
                 break;
             default:
                 cout << "Роль не найдена" << endl;
